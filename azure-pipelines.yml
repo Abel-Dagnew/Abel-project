@@ -46,10 +46,12 @@ stages:
           # Checkout code
           - checkout: self
 
-          # Install Terraform
-          - task: TerraformInstaller@0
-            inputs:
-              terraformVersion: '1.0.x'  # Specify the version of Terraform you need
+          # Install Terraform using the command line
+          - script: |
+              curl -o terraform.zip https://releases.hashicorp.com/terraform/1.0.11/terraform_1.0.11_linux_amd64.zip
+              unzip terraform.zip
+              sudo mv terraform /usr/local/bin/
+              terraform -version
             displayName: 'Install Terraform'
 
           # Authenticate with Azure using a Service Principal
