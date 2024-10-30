@@ -24,7 +24,7 @@ stages:
           # Step to install Node.js (specify your required version)
           - task: NodeTool@0
             inputs:
-              versionSpec: 'node'  # Specify your Node.js version here
+              versionSpec: '22.x'  # Specify your Node.js version here
             displayName: 'Install Node.js (latest version)'
 
           # Step to install npm dependencies
