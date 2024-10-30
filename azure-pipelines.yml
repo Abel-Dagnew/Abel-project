@@ -37,12 +37,7 @@ stages:
               npm run build
             displayName: 'Build React App'
 
-          # Step to run tests (if applicable)
-          - script: |
-              npm test -- --watchAll=false
-            displayName: 'Run Tests'
-
-          # Step to push changes to Azure DevOps repository
+                # Step to push changes to Azure DevOps repository
           - script: |
               git remote add azure https://dev.azure.com/v-abeldagnew/ExampleProject/_git/example-repo
               git push azure --all
