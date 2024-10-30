@@ -72,8 +72,8 @@ stages:
                 
                 # Terraform commands
                 terraform init
-                terraform plan -out=tfplan
-                terraform apply -auto-approve tfplan
+                terraform plan -target=module.Create_App_Service
+                terraform apply -target=module.Create_App_Service
             env:
               AZURE_CLIENT_ID: $(AZURE_CLIENT_ID)
               AZURE_CLIENT_SECRET: $(AZURE_CLIENT_SECRET)
