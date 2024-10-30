@@ -9,14 +9,15 @@ terraform {
 
 
 
-module "Create_Devops_Project" {
+
+
+module "Create_App_Service" {
   
-  source = "./Create_Devops_Project"
+  source = "./Create_App_Service"
   providers = {
-    azuredevops = azuredevops.azdevpro
+    azurerm = azurerm.azresourceprovider
   }
-  github_token = var.github_token
-   
+     
 }
 
 

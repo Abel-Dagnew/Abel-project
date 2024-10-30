@@ -1,16 +1,16 @@
 # azure-pipelines.yml
 
-# Define the trigger for the pipeline
+# Trigger the pipeline on changes to the main branch
 trigger:
   branches:
     include:
-      - main  # Adjust this to the branch you want to monitor for changes
+      - main  # Adjust this to your branch
 
-# Define the pool where the build will run
+# Use the latest Ubuntu VM image
 pool:
-  vmImage: 'ubuntu-latest'  # You can also use 'windows-latest' or 'macOS-latest'
+  vmImage: 'ubuntu-latest'
 
-# Define the build stages
+# Define build and deployment stages
 stages:
   - stage: Build
     displayName: 'Build Stage'
@@ -18,27 +18,24 @@ stages:
       - job: Build
         displayName: 'Build Job'
         steps:
-          # Step to checkout the code from GitHub
+          # Checkout code
           - checkout: self
 
-          # Step to install Node.js (specify your required version)
+          # Install Node.js
           - task: NodeTool@0
             inputs:
               versionSpec: '22.x'  # Specify your Node.js version here
-            displayName: 'Install Node.js (latest version)'
+            displayName: 'Install Node.js'
 
-          # Step to install npm dependencies
+          # Install npm dependencies
           - script: |
               npm install
             displayName: 'Install Dependencies'
 
-          # Step to build the React application
+          # Build the application
           - script: |
               npm run build
-            displayName: 'Build React App'
-
-               
-              
+            displayName: 'Build Application'
 
   - stage: Deploy
     displayName: 'Deploy Stage'
@@ -46,8 +43,48 @@ stages:
       - job: Deploy
         displayName: 'Deployment Job'
         steps:
-          # Step to deploy your application (replace with your deployment logic)
+          # Checkout code
+          - checkout: self
+
+          # Install Terraform CLI
+          - task: UsePythonVersion@0
+            inputs:
+              versionSpec: '3.x'
+              addToPath: true
           - script: |
-              echo "Deploying application..."
-              # Add your deployment commands here (e.g., using Azure CLI or other services)
-            displayName: 'Deploy Application'
+              curl -o- https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
+            displayName: 'Install Terraform'
+
+          # Authenticate with Azure using a Service Principal
+          - task: AzureCLI@2
+            inputs:
+              azureSubscription: 'Abel-serviceP-conn'  # Set up your Azure DevOps service connection
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                # Export Service Principal credentials as environment variables
+                export ARM_CLIENT_ID=${{ secrets.AZURE_CLIENT_ID }}
+                export ARM_CLIENT_SECRET=${{ secrets.AZURE_CLIENT_SECRET }}
+                export ARM_SUBSCRIPTION_ID=${{ secrets.AZURE_SUBSCRIPTION_ID }}
+                export ARM_TENANT_ID=${{ secrets.AZURE_TENANT_ID }}
+                
+                # Terraform commands
+                terraform init
+                terraform plan -out=tfplan
+                terraform apply -auto-approve tfplan
+            displayName: 'Provision Infrastructure with Terraform'
+
+          # Deploy the Node.js app to the Azure App Service
+          - task: AzureCLI@2
+            inputs:
+              azureSubscription: 'Abel-serviceP-conn'
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                # Deploy to Azure App Service
+                zip -r node_app.zip .
+                az webapp deployment source config-zip \
+                  --resource-group "AbelTeraRG" \
+                  --name "Abel-Project2232" \
+                  --src "node_app.zip"
+            displayName: 'Deploy Node.js App to App Service'
