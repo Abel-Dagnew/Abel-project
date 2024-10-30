@@ -37,17 +37,7 @@ stages:
               npm run build
             displayName: 'Build React App'
 
-                # Step to push changes to Azure DevOps repository
-          - script: |
-              git remote add azure https://$(AZURE_DEVOPS_PAT)@dev.azure.com/v-abeldagnew/ExampleProject/_git/example-repo
-              git push azure --all
-              git push azure --tags
-            displayName: 'Push to Azure DevOps Repository'
-            env:
-              GIT_AUTHOR_NAME: 'Your Name'  # Change this to your name
-              GIT_AUTHOR_EMAIL: 'your.email@example.com'  # Change this to your email
-              GIT_COMMITTER_NAME: 'Your Name'  # Change this to your name
-              GIT_COMMITTER_EMAIL: 'your.email@example.com'  # Change this to your email
+               
               
 
   - stage: Deploy
