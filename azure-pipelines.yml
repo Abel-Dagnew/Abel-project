@@ -68,7 +68,7 @@ stages:
                 export ARM_TENANT_ID=$(AZURE_TENANT_ID)
                 
                 # Change to the directory containing Terraform files
-                cd terraform  # Change this if your terraform files are in a different folder
+                  # cd terraform Change this if your terraform files are in a different folder
                 
                 # Terraform commands
                 terraform init
