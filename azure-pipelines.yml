@@ -42,6 +42,7 @@ stages:
     jobs:
       - job: Deploy
         displayName: 'Deployment Job'
+        timeoutInMinutes: 120  # Set job timeout to 120 minutes
         steps:
           # Checkout code
           - checkout: self
@@ -54,10 +55,10 @@ stages:
               terraform -version
             displayName: 'Install Terraform'
 
-          # Authenticate with Azure using a Service Principal
+          # Authenticate with Azure using a Service Principal and enable Terraform debugging
           - task: AzureCLI@2
             inputs:
-              azureSubscription: 'Abel-serviceP-conn'  # Set up your Azure DevOps service connection
+              azureSubscription: 'Abel-serviceP-conn'  # Azure DevOps service connection
               scriptType: bash
               scriptLocation: inlineScript
               inlineScript: |
@@ -67,19 +68,24 @@ stages:
                 export ARM_SUBSCRIPTION_ID=$(AZURE_SUBSCRIPTION_ID)
                 export ARM_TENANT_ID=$(AZURE_TENANT_ID)
                 
-                # Change to the directory containing Terraform files
-                  # cd terraform Change this if your terraform files are in a different folder
-                
-                # Terraform commands
-                terraform init
-                terraform plan -target=module.Create_App_Service
-                terraform apply -target=module.Create_App_Service
+                # Enable Terraform debug logging
+                export TF_LOG=DEBUG
+                export TF_LOG_PATH="terraform_debug.log"  # Specify a log file
+
+                # Change to the directory containing Terraform files if necessary
+                # cd terraform
+
+                # Terraform commands with debug logging
+                terraform init | tee -a $TF_LOG_PATH
+                terraform plan -target=module.Create_App_Service | tee -a $TF_LOG_PATH
+                terraform apply -target=module.Create_App_Service -auto-approve | tee -a $TF_LOG_PATH
             env:
               AZURE_CLIENT_ID: $(AZURE_CLIENT_ID)
               AZURE_CLIENT_SECRET: $(AZURE_CLIENT_SECRET)
               AZURE_SUBSCRIPTION_ID: $(AZURE_SUBSCRIPTION_ID)
               AZURE_TENANT_ID: $(AZURE_TENANT_ID)
             displayName: 'Provision Infrastructure with Terraform'
+            timeoutInMinutes: 90  # Specify timeout for this step, in minutes
 
           # Deploy the Node.js app to the Azure App Service
           - task: AzureCLI@2
@@ -88,10 +94,11 @@ stages:
               scriptType: bash
               scriptLocation: inlineScript
               inlineScript: |
-                # Deploy to Azure App Service
+                # Package and deploy to Azure App Service
                 zip -r node_app.zip .   # Make sure you're in the right directory before zipping
                 az webapp deployment source config-zip \
                   --resource-group "AbelTeraRG" \
                   --name "Abel-Project2232" \
                   --src "node_app.zip"
             displayName: 'Deploy Node.js App to App Service'
+            timeoutInMinutes: 30  # Adjust based on deployment duration
