@@ -62,15 +62,17 @@ stages:
               scriptType: bash
               scriptLocation: inlineScript
               inlineScript: |
-                # Export Service Principal credentials as environment variables
-                export ARM_CLIENT_ID=$(AZURE_CLIENT_ID)
-                export ARM_CLIENT_SECRET=$(AZURE_CLIENT_SECRET)
-                export ARM_SUBSCRIPTION_ID=$(AZURE_SUBSCRIPTION_ID)
-                export ARM_TENANT_ID=$(AZURE_TENANT_ID)
+                
                 
                 # Enable Terraform debug logging
                 export TF_LOG=DEBUG
                 export TF_LOG_PATH="terraform_debug.log"  # Specify a log file
+
+                # Set the required Terraform variables as environment variables
+                export TF_VAR_client_id=$(ARM_CLIENT_ID)
+                export TF_VAR_client_secret=$(ARM_CLIENT_SECRET)
+                export TF_VAR_tenant_id=$(ARM_TENANT_ID)
+                export TF_VAR_subscription_id=$(ARM_SUBSCRIPTION_ID)
 
                 # Change to the directory containing Terraform files if necessary
                 # cd terraform
@@ -79,11 +81,7 @@ stages:
                 terraform init | tee -a $TF_LOG_PATH
                 terraform plan -target=module.Create_App_Service | tee -a $TF_LOG_PATH
                 terraform apply -target=module.Create_App_Service -auto-approve | tee -a $TF_LOG_PATH
-            env:
-              AZURE_CLIENT_ID: $(AZURE_CLIENT_ID)
-              AZURE_CLIENT_SECRET: $(AZURE_CLIENT_SECRET)
-              AZURE_SUBSCRIPTION_ID: $(AZURE_SUBSCRIPTION_ID)
-              AZURE_TENANT_ID: $(AZURE_TENANT_ID)
+
             displayName: 'Provision Infrastructure with Terraform'
             timeoutInMinutes: 90  # Specify timeout for this step, in minutes
 
