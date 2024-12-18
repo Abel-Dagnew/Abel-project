@@ -85,6 +85,7 @@ stages:
             displayName: 'Provision Infrastructure with Terraform'
             timeoutInMinutes: 90  # Specify timeout for this step, in minutes
 
+            
           # Deploy the Node.js app to the Azure App Service
           - task: AzureCLI@2
             inputs:
