@@ -12,15 +12,7 @@ pool:
 
 # Define build and deployment stages
 stages:
-  - stage: LoginToACR
-    displayName: 'Login to Azure Container Registry'
-    jobs:
-      - job: LoginACR
-        displayName: 'Login to ACR'
-        steps:
-          - script: |
-             echo "${ACR_PASSWORD}" | docker login "${ACR_LOGIN_SERVER}" --username "${ACR_USERNAME}" --password-stdin
-            displayName: 'Login to ACR'
+  
 
   - stage: BuildDockerImage
     displayName: 'Build Docker Image'
