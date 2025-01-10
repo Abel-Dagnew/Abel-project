@@ -1,0 +1,51 @@
+pipeline:
+  agent: any
+
+  environment:
+    ACR_NAME: "abelregistryy"  # Your ACR name
+    ACR_LOGIN_SERVER: "${ACR_NAME}.azurecr.io"  # ACR login server URL
+    ACR_USERNAME: "abelregistryy"  # ACR username
+    ACR_PASSWORD: "${ACR_Pass}"  # ACR password stored in Jenkins credentials
+    DOCKER_IMAGE_NAME: "mydocker-repo"  # Name of your Docker image
+    GITHUB_REPO: "https://github.com/Abel-Dagnew/Jenkins-project.git"  # GitHub repository URL
+    DOCKER_USERNAME: "abel13"
+    AZURE_WEB_APP_NAME: "AbelDevops23443"  # Azure Web App name
+    AZURE_RESOURCE_GROUP: "AbelDevopsRG33"  # Azure Resource Group where Web App resides
+
+  stages:
+    - stage: Login to ACR
+      steps:
+        script:
+          sh: |
+            echo $ACR_PASSWORD | docker login $ACR_LOGIN_SERVER --username $ACR_USERNAME --password-stdin
+
+    - stage: Build Docker Image
+      steps:
+        script:
+          sh: docker build -t $ACR_NAME/$DOCKER_IMAGE_NAME:latest .
+
+    - stage: List Docker Images
+      steps:
+        script:
+          sh: docker images
+
+    - stage: Tag Docker Image
+      steps:
+        script:
+          sh: docker tag $ACR_NAME/$DOCKER_IMAGE_NAME:latest $ACR_LOGIN_SERVER/$DOCKER_IMAGE_NAME:latest
+
+    - stage: Push Docker Image to ACR
+      steps:
+        script:
+          sh: docker push $ACR_LOGIN_SERVER/$DOCKER_IMAGE_NAME:latest
+
+    - stage: Pull Image to Web App
+      steps:
+        script:
+          sh: |
+            az webapp config container set --name $AZURE_WEB_APP_NAME \
+            --resource-group $AZURE_RESOURCE_GROUP \
+            --docker-custom-image-name $ACR_LOGIN_SERVER/$DOCKER_IMAGE_NAME:latest \
+            --docker-registry-server-url https://$ACR_LOGIN_SERVER \
+            --docker-registry-server-user $ACR_USERNAME \
+            --docker-registry-server-password $ACR_PASSWORD
