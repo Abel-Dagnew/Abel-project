@@ -1,24 +1,26 @@
 # azure-pipelines.yml
 
+# Trigger the pipeline on changes to the main branch
 trigger:
   branches:
     include:
-      - main  # Adjust to your branch
+      - main  # Adjust this to your branch
 
+# Use the latest Ubuntu VM image
 pool:
   vmImage: 'ubuntu-latest'
-
-variables:
-  ACR_NAME: "abelregistryy"  # Your ACR name
-  ACR_LOGIN_SERVER: "${ACR_NAME}.azurecr.io"  # ACR login server URL
-  ACR_USERNAME: "abelregistryy"  # ACR username
-  ACR_PASSWORD: "${ACR_Pass}"  # ACR password stored in Jenkins credentials
-  DOCKER_IMAGE_NAME: "mydocker-repo"  # Name of your Docker image
-  GITHUB_REPO: "https://github.com/Abel-Dagnew/Jenkins-project.git"  # GitHub repository URL
-  DOCKER_USERNAME: "abel13"
-  AZURE_WEB_APP_NAME: "AbelDevops23443"  # Azure Web App name
-  AZURE_RESOURCE_GROUP: "AbelDevopsRG33"  # Azure Resource Group where Web App resides
-
+# Define build and deployment stages
+environment:
+    ACR_NAME: "abelregistryy"  # Your ACR name
+    ACR_LOGIN_SERVER: "${ACR_NAME}.azurecr.io"  # ACR login server URL
+    ACR_USERNAME: "abelregistryy"  # ACR username
+    ACR_PASSWORD: "${ACR_Pass}"  # ACR password stored in Jenkins credentials
+    DOCKER_IMAGE_NAME: "mydocker-repo"  # Name of your Docker image
+    GITHUB_REPO: "https://github.com/Abel-Dagnew/Jenkins-project.git"  # GitHub repository URL
+    DOCKER_USERNAME: "abel13"
+    AZURE_WEB_APP_NAME: "AbelDevops23443"  # Azure Web App name
+    AZURE_RESOURCE_GROUP: "AbelDevopsRG33"  # Azure Resource Group where Web App resides
+# Define build and deployment stages
 stages:
   - stage: LoginToACR
     displayName: 'Login to Azure Container Registry'
@@ -32,45 +34,50 @@ stages:
 
   - stage: BuildDockerImage
     displayName: 'Build Docker Image'
-    dependsOn: LoginToACR
     jobs:
       - job: BuildDocker
         displayName: 'Build Docker Image'
         steps:
           - script: |
-              docker build -t ${ACR_NAME}/${DOCKER_IMAGE_NAME}:latest .
-              docker images  # Verify the image exists
+              docker build -t $ACR_NAME/$DOCKER_IMAGE_NAME:latest .
             displayName: 'Build Docker Image'
+
+  - stage: ListDockerImages
+    displayName: 'List Docker Images'
+    jobs:
+      - job: ListImages
+        displayName: 'List Docker Images'
+        steps:
+          - script: |
+              docker images
+            displayName: 'List Docker Images'
 
   - stage: TagDockerImage
     displayName: 'Tag Docker Image'
-    dependsOn: BuildDockerImage
     jobs:
       - job: TagImage
         displayName: 'Tag Docker Image'
         steps:
           - script: |
-              docker tag ${ACR_NAME}/${DOCKER_IMAGE_NAME}:latest ${ACR_LOGIN_SERVER}/${DOCKER_IMAGE_NAME}:latest
+              docker tag $ACR_NAME/$DOCKER_IMAGE_NAME:latest $ACR_LOGIN_SERVER/$DOCKER_IMAGE_NAME:latest
             displayName: 'Tag Docker Image'
 
   - stage: PushDockerImage
     displayName: 'Push Docker Image to ACR'
-    dependsOn: TagDockerImage
     jobs:
       - job: PushImage
-        displayName: 'Push Docker Image'
+        displayName: 'Push Docker Image to ACR'
         steps:
           - script: |
-              docker push ${ACR_LOGIN_SERVER}/${DOCKER_IMAGE_NAME}:latest
+              docker push $ACR_LOGIN_SERVER/$DOCKER_IMAGE_NAME:latest
             displayName: 'Push Docker Image'
 
   - stage: DeployToAzure
     displayName: 'Deploy to Azure'
-    dependsOn: PushDockerImage
     jobs:
       - job: DeployInfrastructure
         displayName: 'Provision and Deploy Infrastructure'
-        timeoutInMinutes: 120
+        timeoutInMinutes: 120  # Set job timeout to 120 minutes
         steps:
           # Checkout code
           - checkout: self
@@ -108,10 +115,10 @@ stages:
 
           # Configure Azure Web App with Docker Image
           - script: |
-              az webapp config container set --name ${AZURE_WEB_APP_NAME} \
-              --resource-group ${AZURE_RESOURCE_GROUP} \
-              --docker-custom-image-name ${ACR_LOGIN_SERVER}/${DOCKER_IMAGE_NAME}:latest \
-              --docker-registry-server-url https://${ACR_LOGIN_SERVER} \
-              --docker-registry-server-user ${ACR_USERNAME} \
-              --docker-registry-server-password ${ACR_PASSWORD}
-            displayName: 'Deploy Docker Image to Web App'
+              az webapp config container set --name $AZURE_WEB_APP_NAME \
+              --resource-group $AZURE_RESOURCE_GROUP \
+              --docker-custom-image-name $ACR_LOGIN_SERVER/$DOCKER_IMAGE_NAME:latest \
+              --docker-registry-server-url https://$ACR_LOGIN_SERVER \
+              --docker-registry-server-user $ACR_USERNAME \
+              --docker-registry-server-password $ACR_PASSWORD
+            displayName: 'Configure Azure Web App'
