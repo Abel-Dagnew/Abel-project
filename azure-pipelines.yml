@@ -54,15 +54,7 @@ stages:
               docker images
             displayName: 'List Docker Images'
 
-  - stage: TagDockerImage
-    displayName: 'Tag Docker Image'
-    jobs:
-      - job: TagImage
-        displayName: 'Tag Docker Image'
-        steps:
-          - script: |
-              docker tag $(ACR_NAME)/$(DOCKER_IMAGE_NAME):latest $(ACR_LOGIN_SERVER)/$(DOCKER_IMAGE_NAME):latest
-            displayName: 'Tag Docker Image'
+  
 
   - stage: PushDockerImage
     displayName: 'Push Docker Image to ACR'
