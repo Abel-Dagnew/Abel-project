@@ -1,28 +1,20 @@
 # azure-pipelines.yml
 
-# Trigger the pipeline on changes to the main branch
 trigger:
   branches:
     include:
-      - main  # Adjust this to your branch
+      - main  # Adjust to your branch
 
-# Use the latest Ubuntu VM image
 pool:
   vmImage: 'ubuntu-latest'
 
-# Define pipeline variables
 variables:
-  ACR_NAME: "abelregistryy"  # Your ACR name
-  ACR_LOGIN_SERVER: "$(ACR_NAME).azurecr.io"  # ACR login server URL
-  ACR_USERNAME: "abelregistryy"  # ACR username
-  ACR_PASSWORD: "$(ACR_Pass)"  # ACR password stored as a pipeline secret variable
-  DOCKER_IMAGE_NAME: "mydocker-repo"  # Name of your Docker image
-  GITHUB_REPO: "https://github.com/Abel-Dagnew/Jenkins-project.git"  # GitHub repository URL
-  DOCKER_USERNAME: "abel13"
-  AZURE_WEB_APP_NAME: "AbelDevops23443"  # Azure Web App name
-  AZURE_RESOURCE_GROUP: "AbelDevopsRG33"  # Azure Resource Group where Web App resides
+  ACR_NAME: "abelregistryy"
+  ACR_LOGIN_SERVER: "$(ACR_NAME).azurecr.io"
+  DOCKER_IMAGE_NAME: "mydocker-repo"
+  AZURE_WEB_APP_NAME: "AbelDevops23443"
+  AZURE_RESOURCE_GROUP: "AbelDevopsRG33"
 
-# Define build and deployment stages
 stages:
   - stage: LoginToACR
     displayName: 'Login to Azure Container Registry'
@@ -36,26 +28,19 @@ stages:
 
   - stage: BuildDockerImage
     displayName: 'Build Docker Image'
+    dependsOn: LoginToACR
     jobs:
       - job: BuildDocker
         displayName: 'Build Docker Image'
         steps:
           - script: |
               docker build -t $(ACR_NAME)/$(DOCKER_IMAGE_NAME):latest .
+              docker images  # Verify image build
             displayName: 'Build Docker Image'
-
-  - stage: ListDockerImages
-    displayName: 'List Docker Images'
-    jobs:
-      - job: ListImages
-        displayName: 'List Docker Images'
-        steps:
-          - script: |
-              docker images
-            displayName: 'List Docker Images'
 
   - stage: TagDockerImage
     displayName: 'Tag Docker Image'
+    dependsOn: BuildDockerImage
     jobs:
       - job: TagImage
         displayName: 'Tag Docker Image'
@@ -66,9 +51,10 @@ stages:
 
   - stage: PushDockerImage
     displayName: 'Push Docker Image to ACR'
+    dependsOn: TagDockerImage
     jobs:
       - job: PushImage
-        displayName: 'Push Docker Image to ACR'
+        displayName: 'Push Docker Image'
         steps:
           - script: |
               docker push $(ACR_LOGIN_SERVER)/$(DOCKER_IMAGE_NAME):latest
@@ -76,12 +62,12 @@ stages:
 
   - stage: DeployToAzure
     displayName: 'Deploy to Azure'
+    dependsOn: PushDockerImage
     jobs:
       - job: DeployInfrastructure
         displayName: 'Provision and Deploy Infrastructure'
-        timeoutInMinutes: 120  # Set job timeout to 120 minutes
+        timeoutInMinutes: 120
         steps:
-          # Checkout code
           - checkout: self
 
           # Install Terraform
@@ -92,30 +78,28 @@ stages:
               terraform -version
             displayName: 'Install Terraform'
 
-          # Authenticate with Azure and run Terraform commands
+          # Run Terraform to provision infrastructure
           - task: AzureCLI@2
             inputs:
-              azureSubscription: 'Abel-serviceP-conn'  # Azure DevOps service connection
+              azureSubscription: 'Abel-serviceP-conn'
               scriptType: bash
               scriptLocation: inlineScript
               inlineScript: |
-                # Enable Terraform debug logging
                 export TF_LOG=DEBUG
-                export TF_LOG_PATH="terraform_debug.log"  # Specify a log file
+                export TF_LOG_PATH="terraform_debug.log"
+                
+                # Set Terraform variables
+                export TF_VAR_client_id=$(ARM_CLIENT_ID)
+                export TF_VAR_client_secret=$(ARM_CLIENT_SECRET)
+                export TF_VAR_tenant_id=$(ARM_TENANT_ID)
+                export TF_VAR_subscription_id=$(ARM_SUBSCRIPTION_ID)
 
-                # Set the required Terraform variables as environment variables
-                export TF_VAR_client_id=$ARM_CLIENT_ID
-                export TF_VAR_client_secret=$ARM_CLIENT_SECRET
-                export TF_VAR_tenant_id=$ARM_TENANT_ID
-                export TF_VAR_subscription_id=$ARM_SUBSCRIPTION_ID
-
-                # Initialize and apply Terraform
                 terraform init | tee -a $TF_LOG_PATH
                 terraform plan -target=module.Create_App_Service | tee -a $TF_LOG_PATH
                 terraform apply -target=module.Create_App_Service -auto-approve | tee -a $TF_LOG_PATH
             displayName: 'Provision Infrastructure with Terraform'
 
-          # Configure Azure Web App with Docker Image
+          # Deploy Docker Image to Azure Web App
           - script: |
               az webapp config container set --name $(AZURE_WEB_APP_NAME) \
               --resource-group $(AZURE_RESOURCE_GROUP) \
@@ -123,4 +107,4 @@ stages:
               --docker-registry-server-url https://$(ACR_LOGIN_SERVER) \
               --docker-registry-server-user $(ACR_USERNAME) \
               --docker-registry-server-password $(ACR_PASSWORD)
-            displayName: 'Configure Azure Web App'
+            displayName: 'Deploy Docker Image to Web App'
