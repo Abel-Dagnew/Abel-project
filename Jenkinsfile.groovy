@@ -19,7 +19,7 @@ stages:
         displayName: 'Login to ACR'
         steps:
           - script: |
-              echo $ACR_PASSWORD | docker login $ACR_LOGIN_SERVER --username $ACR_USERNAME --password-stdin
+              echo "${ACR_PASSWORD}" | docker login "${ACR_LOGIN_SERVER}" --username "${ACR_USERNAME}" --password-stdin
             displayName: 'Login to ACR'
 
   - stage: BuildDockerImage
