@@ -1,5 +1,3 @@
-# azure-pipelines.yml
-
 # Trigger the pipeline on changes to the main branch
 trigger:
   branches:
@@ -37,8 +35,67 @@ stages:
               npm run build
             displayName: 'Build Application'
 
+  - stage: OWASP
+    displayName: 'OWASP ZAP Security Check'
+    dependsOn: Build
+    jobs:
+      - job: OWASPZAP
+        displayName: 'OWASP ZAP Scan'
+        steps:
+          # Install OWASP ZAP
+          - script: |
+              sudo apt-get update
+              sudo apt-get install -y zaproxy
+              zap-cli start --start-options '-daemon -config api.disablekey=true'
+              zap-cli status --timeout 300
+            displayName: 'Install and Start OWASP ZAP'
+
+          # Run OWASP ZAP against your application
+          - script: |
+              zap-cli quick-scan http://localhost:3000  # Replace with your application's URL
+              zap-cli report -o zap_report.html -f html
+            displayName: 'Run OWASP ZAP Scan'
+
+          # Publish OWASP ZAP Report
+          - task: PublishBuildArtifacts@1
+            inputs:
+              artifactName: 'OWASP_ZAP_Report'
+              targetPath: $(System.DefaultWorkingDirectory)/zap_report.html
+            displayName: 'Publish OWASP ZAP Report'
+
+  # - stage: SonarQube
+  #   displayName: 'SonarQube Static Code Analysis'
+  #   dependsOn: Build
+  #   jobs:
+  #     - job: SonarQube
+  #       displayName: 'SonarQube SCA'
+  #       steps:
+  #         # Prepare SonarQube analysis
+  #         - task: SonarQubePrepare@5
+  #           inputs:
+  #             SonarQube: 'SonarQube-Service-Connection'  # Replace with your SonarQube service connection
+  #             scannerMode: 'CLI'
+  #             configMode: 'manual'
+  #             cliProjectKey: 'YourProjectKey'
+  #             cliSources: '.'
+  #             extraProperties: |
+  #               sonar.javascript.file.suffixes=.js
+  #               sonar.exclusions=**/node_modules/**
+
+  #         # Run SonarQube scanner
+  #         - task: SonarQubeAnalyze@5
+
+  #         # Publish SonarQube analysis results
+  #         - task: SonarQubePublish@5
+  #           inputs:
+  #             pollingTimeoutSec: '300'
+
   - stage: Deploy
     displayName: 'Deploy Stage'
+    dependsOn: 
+      - Build
+      - OWASP
+      - SonarQube
     jobs:
       - job: Deploy
         displayName: 'Deployment Job'
@@ -62,8 +119,6 @@ stages:
               scriptType: bash
               scriptLocation: inlineScript
               inlineScript: |
-                
-                
                 # Enable Terraform debug logging
                 export TF_LOG=DEBUG
                 export TF_LOG_PATH="terraform_debug.log"  # Specify a log file
@@ -73,9 +128,6 @@ stages:
                 export TF_VAR_client_secret=$(ARM_CLIENT_SECRET)
                 export TF_VAR_tenant_id=$(ARM_TENANT_ID)
                 export TF_VAR_subscription_id=$(ARM_SUBSCRIPTION_ID)
-
-                # Change to the directory containing Terraform files if necessary
-                # cd terraform
 
                 # Terraform commands with debug logging
                 terraform init | tee -a $TF_LOG_PATH
