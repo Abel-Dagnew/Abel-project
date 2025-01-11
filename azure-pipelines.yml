@@ -42,12 +42,18 @@ stages:
       - job: OWASPZAP
         displayName: 'OWASP ZAP Scan'
         steps:
-          # Install OWASP ZAP
+          # Install Java 17 (required for OWASP ZAP v2.16.0)
           - script: |
               sudo apt-get update
+              sudo apt-get install -y openjdk-17-jdk
+              java -version
+            displayName: 'Install Java 17'
+
+          # Install OWASP ZAP
+          - script: |
               wget https://github.com/zaproxy/zaproxy/releases/download/v2.16.0/ZAP_2.16.0_Linux.tar.gz
               tar -xvf ZAP_2.16.0_Linux.tar.gz -C /opt
-              sudo ln -s /opt/ZAP_2.16.0/zap.sh /usr/local/bin/zap
+              sudo ln -sf /opt/ZAP_2.16.0/zap.sh /usr/local/bin/zap
             displayName: 'Install OWASP ZAP'
 
           # Start OWASP ZAP
