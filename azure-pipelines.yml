@@ -10,109 +10,81 @@ trigger:
 pool:
   vmImage: 'ubuntu-latest'
 
-# Define pipeline variables
-variables:
-  ACR_NAME: "abelregistryy"  # Your ACR name
-  ACR_LOGIN_SERVER: "$(ACR_NAME).azurecr.io"  # ACR login server URL
-  ACR_USERNAME: "abelregistryy"  # ACR username
-  ACR_PASSWORD: "$(ACR_Pass)"  # ACR password stored as a pipeline secret variable
-  DOCKER_IMAGE_NAME: "mydocker-repo"  # Name of your Docker image
-  GITHUB_REPO: "https://github.com/Abel-Dagnew/Jenkins-project.git"  # GitHub repository URL
-  DOCKER_USERNAME: "abel13"
-  AZURE_WEB_APP_NAME: "AbelDevops23443"  # Azure Web App name
-  AZURE_RESOURCE_GROUP: "AbelDevopsRG33"  # Azure Resource Group where Web App resides
-
 # Define build and deployment stages
 stages:
-  - stage: LoginToACR
-    displayName: 'Login to Azure Container Registry'
+  - stage: Build
+    displayName: 'Build Stage'
     jobs:
-      - job: LoginACR
-        displayName: 'Login to ACR'
-        steps:
-          - script: |
-              echo "$(ACR_PASSWORD)" | docker login "$(ACR_LOGIN_SERVER)" --username "$(ACR_USERNAME)" --password-stdin
-            displayName: 'Login to ACR'
-
-  - stage: BuildDockerImage
-    displayName: 'Build Docker Image'
-    jobs:
-      - job: BuildDocker
-        displayName: 'Build Docker Image'
-        steps:
-          - script: |
-              docker build -t $(ACR_NAME)/$(DOCKER_IMAGE_NAME):latest .
-            displayName: 'Build Docker Image'
-
-  - stage: ListDockerImages
-    displayName: 'List Docker Images'
-    jobs:
-      - job: ListImages
-        displayName: 'List Docker Images'
-        steps:
-          - script: |
-              docker images
-            displayName: 'List Docker Images'
-
-  
-
-  - stage: PushDockerImage
-    displayName: 'Push Docker Image to ACR'
-    jobs:
-      - job: PushImage
-        displayName: 'Push Docker Image to ACR'
-        steps:
-          - script: |
-              docker push $(ACR_LOGIN_SERVER)/$(DOCKER_IMAGE_NAME):latest
-            displayName: 'Push Docker Image'
-
-  - stage: DeployToAzure
-    displayName: 'Deploy to Azure'
-    jobs:
-      - job: DeployInfrastructure
-        displayName: 'Provision and Deploy Infrastructure'
-        timeoutInMinutes: 120  # Set job timeout to 120 minutes
+      - job: Build
+        displayName: 'Build Job'
         steps:
           # Checkout code
           - checkout: self
 
-          # Install Terraform
+          # Install Node.js
+          - task: NodeTool@0
+            inputs:
+              versionSpec: '22.x'  # Specify your Node.js version here
+            displayName: 'Install Node.js'
+
+          # Install npm dependencies
           - script: |
-              curl -o terraform.zip https://releases.hashicorp.com/terraform/1.0.11/terraform_1.0.11_linux_amd64.zip
-              unzip terraform.zip
-              sudo mv terraform /usr/local/bin/
-              terraform -version
+              npm install
+            displayName: 'Install Dependencies'
+
+          # Build the application
+          - script: |
+              npm run build
+            displayName: 'Build Application'
+
+  - stage: Deploy
+    displayName: 'Deploy Stage'
+    jobs:
+      - job: Deploy
+        displayName: 'Deployment Job'
+        steps:
+          # Checkout code
+          - checkout: self
+
+          # Install Terraform CLI
+          - task: UsePythonVersion@0
+            inputs:
+              versionSpec: '3.x'
+              addToPath: true
+          - script: |
+              curl -o- https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
             displayName: 'Install Terraform'
 
-          # Authenticate with Azure and run Terraform commands
+          # Authenticate with Azure using a Service Principal
           - task: AzureCLI@2
             inputs:
-              azureSubscription: 'Abel-serviceP-conn'  # Azure DevOps service connection
+              azureSubscription: 'Abel-serviceP-conn'  # Set up your Azure DevOps service connection
               scriptType: bash
               scriptLocation: inlineScript
               inlineScript: |
-                # Enable Terraform debug logging
-                export TF_LOG=DEBUG
-                export TF_LOG_PATH="terraform_debug.log"  # Specify a log file
-
-                # Set the required Terraform variables as environment variables
-                export TF_VAR_client_id=$ARM_CLIENT_ID
-                export TF_VAR_client_secret=$ARM_CLIENT_SECRET
-                export TF_VAR_tenant_id=$ARM_TENANT_ID
-                export TF_VAR_subscription_id=$ARM_SUBSCRIPTION_ID
-
-                # Initialize and apply Terraform
-                terraform init | tee -a $TF_LOG_PATH
-                terraform plan -target=module.Create_App_Service | tee -a $TF_LOG_PATH
-                terraform apply -target=module.Create_App_Service -auto-approve | tee -a $TF_LOG_PATH
+                # Export Service Principal credentials as environment variables
+                export ARM_CLIENT_ID=${{ secrets.AZURE_CLIENT_ID }}
+                export ARM_CLIENT_SECRET=${{ secrets.AZURE_CLIENT_SECRET }}
+                export ARM_SUBSCRIPTION_ID=${{ secrets.AZURE_SUBSCRIPTION_ID }}
+                export ARM_TENANT_ID=${{ secrets.AZURE_TENANT_ID }}
+                
+                # Terraform commands
+                terraform init
+                terraform plan -out=tfplan
+                terraform apply -auto-approve tfplan
             displayName: 'Provision Infrastructure with Terraform'
 
-          # Configure Azure Web App with Docker Image
-          - script: |
-              az webapp config container set --name $(AZURE_WEB_APP_NAME) \
-              --resource-group $(AZURE_RESOURCE_GROUP) \
-              --docker-custom-image-name $(ACR_LOGIN_SERVER)/$(DOCKER_IMAGE_NAME):latest \
-              --docker-registry-server-url https://$(ACR_LOGIN_SERVER) \
-              --docker-registry-server-user $(ACR_USERNAME) \
-              --docker-registry-server-password $(ACR_PASSWORD)
-            displayName: 'Configure Azure Web App'
+          # Deploy the Node.js app to the Azure App Service
+          - task: AzureCLI@2
+            inputs:
+              azureSubscription: 'Abel-serviceP-conn'
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                # Deploy to Azure App Service
+                zip -r node_app.zip .
+                az webapp deployment source config-zip \
+                  --resource-group "AbelTeraRG" \
+                  --name "Abel-Project2232" \
+                  --src "node_app.zip"
+            displayName: 'Deploy Node.js App to App Service'
