@@ -46,8 +46,9 @@ stages:
           - script: |
               sudo apt-get update
               sudo apt-get install -y openjdk-17-jdk
+              sudo update-alternatives --config java
               java -version
-            displayName: 'Install Java 17'
+            displayName: 'Install Java 17 and Set as Default'
 
           # Install OWASP ZAP
           - script: |
