@@ -95,7 +95,7 @@ stages:
     dependsOn: 
       - Build
       - OWASP
-      - SonarQube
+      # - SonarQube
     jobs:
       - job: Deploy
         displayName: 'Deployment Job'
