@@ -60,8 +60,12 @@ stages:
 
           # Start OWASP ZAP
           - script: |
-              zap -daemon -config api.disablekey=true -port 8080
-              sleep 30  # Allow time for ZAP to initialize
+              zap -daemon -config api.disablekey=true -port 8080 &
+              # Wait for ZAP to initialize (check if port is open)
+              until nc -z localhost 8080; do
+                echo "Waiting for ZAP to start..."
+                sleep 5
+              done
             displayName: 'Start OWASP ZAP'
 
           # Run OWASP ZAP Scan
@@ -152,9 +156,11 @@ stages:
               scriptType: bash
               scriptLocation: inlineScript
               inlineScript: |
-                zip -r node_app.zip .
+                zip -r node_app.zip . 
                 az webapp deployment source config-zip \
                   --resource-group "AbelDevopsRG33" \
                   --name "AbelDevops23443" \
                   --src "node_app.zip"
             displayName: 'Deploy Node.js App to App Service'
+
+
