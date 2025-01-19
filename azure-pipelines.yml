@@ -85,8 +85,12 @@ stages:
                 export TF_VAR_tenant_id=$(ARM_TENANT_ID)
                 export TF_VAR_subscription_id=$(ARM_SUBSCRIPTION_ID)
 
-                # Run Terraform Init with reconfigure (if needed)
-                terraform init  
+                # Initialize Terraform with remote backend configuration
+                terraform init \
+                  -backend-config="resource_group_name=$(ARM_RESOURCE_GROUP)" \
+                  -backend-config="storage_account_name=$(ARM_STORAGE_ACCOUNT)" \
+                  -backend-config="container_name=terraform-state" \
+                  -backend-config="key=terraform.tfstate"
 
                 # Terraform Plan and Apply
                 terraform plan -target=module.Create_App_Service | tee -a $TF_LOG_PATH
@@ -101,8 +105,9 @@ stages:
               echo "Authenticated with Azure CLI."
             displayName: 'Azure CLI Authentication'
 
-          # Deploy the Node.js app
+          # Deploy the Node.js app to App Service
           - script: |
+              echo "Deploying Node.js app to Azure App Service..."
               az webapp deployment source config-zip \
                 --resource-group "AbelDevopsRG33" \
                 --name "AbelDevops23443" \
