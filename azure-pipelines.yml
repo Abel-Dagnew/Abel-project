@@ -1,14 +1,11 @@
-# Trigger the pipeline on changes to the main branch
 trigger:
   branches:
     include:
       - main
 
-# Use the latest Ubuntu VM image
 pool:
   vmImage: 'ubuntu-latest'
 
-# Define build and deployment stages
 stages:
   - stage: Build
     displayName: 'Build Stage'
@@ -46,11 +43,13 @@ stages:
   - stage: Deploy
     displayName: 'Deploy Stage'
     dependsOn: 
-      - Build  # Ensure the Build stage is completed first
+      - Build
     jobs:
-      - job: Provision
-        displayName: 'Provision Infrastructure with Terraform'
+      - job: Deploy
+        displayName: 'Deployment Job'
+        timeoutInMinutes: 120
         steps:
+          
           # Install Terraform
           - script: |
               curl -o terraform.zip https://releases.hashicorp.com/terraform/1.0.11/terraform_1.0.11_linux_amd64.zip
@@ -59,32 +58,40 @@ stages:
               terraform -version
             displayName: 'Install Terraform'
 
-          # Authenticate and initialize Terraform
-          - script: |
-              echo "Initializing Terraform..."
-              terraform init
-              terraform plan -out=tfplan
-              terraform apply -auto-approve
-            displayName: 'Provision Infrastructure'
+          # Authenticate and initialize Terraform backend with reconfigure
+          - task: AzureCLI@2
+            inputs:
+              azureSubscription: 'Abel-serviceP-conn'
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                export TF_LOG=DEBUG
+                export TF_LOG_PATH="terraform_debug.log"
+                export TF_VAR_client_id=$(ARM_CLIENT_ID)
+                export TF_VAR_client_secret=$(ARM_CLIENT_SECRET)
+                export TF_VAR_tenant_id=$(ARM_TENANT_ID)
+                export TF_VAR_subscription_id=$(ARM_SUBSCRIPTION_ID)
 
-      - job: Deploy
-        displayName: 'Deployment Job'
-        dependsOn: 
-          - Provision  # Ensure the Provision job is completed before deployment
-        timeoutInMinutes: 120
-        steps:
+                # Run Terraform Init with reconfigure (if needed)
+                terraform init -reconfigure  # Explicitly reconfigure if the backend requires changes
+
+                # Terraform Plan and Apply
+                terraform plan -target=module.Create_App_Service | tee -a $TF_LOG_PATH
+                terraform apply -target=module.Create_App_Service -auto-approve | tee -a $TF_LOG_PATH
+            displayName: 'Provision Infrastructure with Terraform'
+
           # Authenticate Azure CLI with Azure service principal
           - script: |
               echo "Authenticating with Azure CLI using Service Principal..."
               az login --service-principal -u $(ARM_CLIENT_ID) -p $(ARM_CLIENT_SECRET) --tenant $(ARM_TENANT_ID)
               az account set --subscription $(ARM_SUBSCRIPTION_ID)
               echo "Authenticated with Azure CLI."
-            displayName: 'Azure CLI Authentication'
+            displayName: 'Azure CLI Authentication' 
 
-          # Deploy the Node.js app using zip file directly from the artifact staging directory
+          # Deploy the Node.js app
           - script: |
               az webapp deployment source config-zip \
                 --resource-group "AbelDevopsRG33" \
                 --name "AbelDevops23443" \
-                --src "$(Build.ArtifactStagingDirectory)/node_app.zip"  # Directly reference the zip file from the artifact staging directory
+                --src "$(Build.ArtifactStagingDirectory)/node_app.zip"
             displayName: 'Deploy Node.js App to App Service'
