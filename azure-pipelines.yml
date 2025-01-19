@@ -34,11 +34,18 @@ stages:
               npm run build
             displayName: 'Build Application'
 
-          # Create a zip file of the application and store it in the artifact staging directory
+          # Create a zip file of the application
           - script: |
               cd app
               zip -r $(Build.ArtifactStagingDirectory)/node_app.zip .  # Use Artifact Staging Directory
             displayName: 'Create Node.js App ZIP'
+
+          # Publish the artifact
+          - task: PublishPipelineArtifact@1
+            inputs:
+              targetPath: '$(Build.ArtifactStagingDirectory)/node_app.zip'
+              artifact: 'node_app'
+            displayName: 'Publish Build Artifact'
 
   - stage: Deploy
     displayName: 'Deploy Stage'
@@ -49,7 +56,13 @@ stages:
         displayName: 'Deployment Job'
         timeoutInMinutes: 120
         steps:
-          
+          # Download the artifact
+          - task: DownloadPipelineArtifact@2
+            inputs:
+              artifact: 'node_app'
+              path: '$(Pipeline.Workspace)'  # This should download into $(Pipeline.Workspace)/node_app.zip
+            displayName: 'Download Build Artifact'
+
           # Install Terraform
           - script: |
               curl -o terraform.zip https://releases.hashicorp.com/terraform/1.0.11/terraform_1.0.11_linux_amd64.zip
@@ -73,7 +86,7 @@ stages:
                 export TF_VAR_subscription_id=$(ARM_SUBSCRIPTION_ID)
 
                 # Run Terraform Init with reconfigure (if needed)
-                terraform init -reconfigure  # Explicitly reconfigure if the backend requires changes
+                terraform init  
 
                 # Terraform Plan and Apply
                 terraform plan -target=module.Create_App_Service | tee -a $TF_LOG_PATH
@@ -86,12 +99,12 @@ stages:
               az login --service-principal -u $(ARM_CLIENT_ID) -p $(ARM_CLIENT_SECRET) --tenant $(ARM_TENANT_ID)
               az account set --subscription $(ARM_SUBSCRIPTION_ID)
               echo "Authenticated with Azure CLI."
-            displayName: 'Azure CLI Authentication' 
+            displayName: 'Azure CLI Authentication'
 
           # Deploy the Node.js app
           - script: |
               az webapp deployment source config-zip \
                 --resource-group "AbelDevopsRG33" \
                 --name "AbelDevops23443" \
-                --src "$(Build.ArtifactStagingDirectory)/node_app.zip"
+                --src "$(Pipeline.Workspace)/node_app.zip"  # Correct download path
             displayName: 'Deploy Node.js App to App Service'
