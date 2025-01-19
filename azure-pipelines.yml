@@ -87,9 +87,9 @@ stages:
 
                 # Initialize Terraform with remote backend configuration
                 terraform init \
-                  -backend-config="resource_group_name=$(ARM_RESOURCE_GROUP)" \
-                  -backend-config="storage_account_name=$(ARM_STORAGE_ACCOUNT)" \
-                  -backend-config="container_name=terraform-state" \
+                  -backend-config="resource_group_name=terraform-statefile \
+                  -backend-config="storage_account_name=terraform443 \
+                  -backend-config="container_name=terraform-statefile" \
                   -backend-config="key=terraform.tfstate"
 
                 # Terraform Plan and Apply
