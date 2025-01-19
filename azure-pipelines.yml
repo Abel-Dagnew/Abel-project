@@ -37,10 +37,10 @@ stages:
               npm run build
             displayName: 'Build Application'
 
-          # Create a zip file of the application
+          # Create a zip file of the application and store it in the artifact staging directory
           - script: |
               cd app
-              zip -r ../node_app.zip .
+              zip -r $(Build.ArtifactStagingDirectory)/node_app.zip .  # Use Artifact Staging Directory
             displayName: 'Create Node.js App ZIP'
 
   - stage: Deploy
@@ -79,10 +79,10 @@ stages:
               echo "Authenticated with Azure CLI."
             displayName: 'Azure CLI Authentication'
 
-          # Deploy the Node.js app using zip file directly from the build source directory
+          # Deploy the Node.js app using zip file directly from the artifact staging directory
           - script: |
               az webapp deployment source config-zip \
                 --resource-group "AbelDevopsRG33" \
                 --name "AbelDevops23443" \
-                --src "$(Build.SourcesDirectory)/node_app.zip"  # Directly reference the zip file from the build source
+                --src "$(Build.ArtifactStagingDirectory)/node_app.zip"  # Directly reference the zip file from the artifact staging directory
             displayName: 'Deploy Node.js App to App Service'
