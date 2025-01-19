@@ -1,11 +1,14 @@
+# Trigger the pipeline on changes to the main branch
 trigger:
   branches:
     include:
       - main
 
+# Use the latest Ubuntu VM image
 pool:
   vmImage: 'ubuntu-latest'
 
+# Define build and deployment stages
 stages:
   - stage: Build
     displayName: 'Build Stage'
@@ -40,15 +43,30 @@ stages:
               zip -r ../node_app.zip .
             displayName: 'Create Node.js App ZIP'
 
+          # Publish the artifact
+          - task: PublishPipelineArtifact@1
+            inputs:
+              targetPath: 'node_app.zip'
+              artifact: 'node_app'
+            displayName: 'Publish Build Artifact'
+
   - stage: Deploy
     displayName: 'Deploy Stage'
     dependsOn: 
       - Build
+      
     jobs:
       - job: Deploy
         displayName: 'Deployment Job'
         timeoutInMinutes: 120
         steps:
+          # Download the artifact
+          - task: DownloadPipelineArtifact@2
+            inputs:
+              artifact: 'node_app'
+              path: '$(Pipeline.Workspace)'
+            displayName: 'Download Build Artifact'
+
           # Install Terraform
           - script: |
               curl -o terraform.zip https://releases.hashicorp.com/terraform/1.0.11/terraform_1.0.11_linux_amd64.zip
@@ -57,36 +75,21 @@ stages:
               terraform -version
             displayName: 'Install Terraform'
 
-          # Authenticate and initialize Terraform backend
+          # Authenticate Azure CLI with Azure service principal
           - task: AzureCLI@2
             inputs:
-              azureSubscription: 'Abel-serviceP-conn'
+              azureSubscription: 'Abel-serviceP-conn'  # Your Azure service connection
               scriptType: bash
               scriptLocation: inlineScript
               inlineScript: |
-                export TF_LOG=DEBUG
-                export TF_LOG_PATH="terraform_debug.log"
-                export TF_VAR_client_id=$(ARM_CLIENT_ID)
-                export TF_VAR_client_secret=$(ARM_CLIENT_SECRET)
-                export TF_VAR_tenant_id=$(ARM_TENANT_ID)
-                export TF_VAR_subscription_id=$(ARM_SUBSCRIPTION_ID)
+                # Ensure correct Azure CLI authentication context
+                az account set --subscription $(ARM_SUBSCRIPTION_ID)
+                echo "Authenticated with Azure CLI."
 
-                # Initialize Terraform (uncomment backend configuration if needed)
-                terraform init \
-                  # -reconfigure \
-                  # -backend-config="resource_group_name=abel_RG" \
-                  # -backend-config="storage_account_name=terraform443" \
-                  # -backend-config="container_name=terraform-statefile" \
-                  # -backend-config="key=terraform.tfstate"
-
-                terraform plan -target=module.Create_App_Service | tee -a $TF_LOG_PATH
-                terraform apply -target=module.Create_App_Service -auto-approve | tee -a $TF_LOG_PATH
-            displayName: 'Provision Infrastructure with Terraform'
-
-          # Deploy the Node.js app directly (without publishing artifact)
+          # Deploy the Node.js app
           - script: |
               az webapp deployment source config-zip \
                 --resource-group "AbelDevopsRG33" \
                 --name "AbelDevops23443" \
-                --src "$(Build.SourcesDirectory)/node_app.zip"  # Directly reference the file
+                --src "$(Pipeline.Workspace)/node_app.zip"  # Directly reference the file
             displayName: 'Deploy Node.js App to App Service'
