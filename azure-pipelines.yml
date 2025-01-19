@@ -48,11 +48,30 @@ stages:
     dependsOn: 
       - Build
     jobs:
+      - job: Provision
+        displayName: 'Provision Infrastructure with Terraform'
+        steps:
+          # Install Terraform
+          - script: |
+              curl -o terraform.zip https://releases.hashicorp.com/terraform/1.0.11/terraform_1.0.11_linux_amd64.zip
+              unzip terraform.zip
+              sudo mv terraform /usr/local/bin/
+              terraform -version
+            displayName: 'Install Terraform'
+
+          # Authenticate and initialize Terraform
+          - script: |
+              echo "Initializing Terraform..."
+              terraform init
+              terraform plan -out=tfplan
+              terraform apply -auto-approve
+            displayName: 'Provision Infrastructure'
+
       - job: Deploy
         displayName: 'Deployment Job'
         timeoutInMinutes: 120
         steps:
-          # Authenticate Azure CLI with Service Principal
+          # Authenticate Azure CLI with Azure service principal
           - script: |
               echo "Authenticating with Azure CLI using Service Principal..."
               az login --service-principal -u $(ARM_CLIENT_ID) -p $(ARM_CLIENT_SECRET) --tenant $(ARM_TENANT_ID)
@@ -60,7 +79,7 @@ stages:
               echo "Authenticated with Azure CLI."
             displayName: 'Azure CLI Authentication'
 
-          # Deploy the Node.js app using zip file directly from the source directory
+          # Deploy the Node.js app using zip file directly from the build source directory
           - script: |
               az webapp deployment source config-zip \
                 --resource-group "AbelDevopsRG33" \
