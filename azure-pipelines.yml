@@ -35,86 +35,12 @@ stages:
               npm run build
             displayName: 'Build Application'
 
-  # - stage: OWASP
-    displayName: 'OWASP ZAP Security Check'
-    dependsOn: Build
-    jobs:
-      - job: OWASPZAP
-        displayName: 'OWASP ZAP Scan'
-        steps:
-          # Install Java 17 (required for OWASP ZAP v2.16.0)
-          - script: |
-              sudo apt-get update
-              sudo apt-get install -y openjdk-17-jdk
-              # Set Java 17 as default without interactive prompt
-              sudo update-alternatives --set java /usr/lib/jvm/java-17-openjdk-amd64/bin/java
-              java -version
-            displayName: 'Install Java 17 and Set as Default'
-
-          # Install OWASP ZAP
-          - script: |
-              wget https://github.com/zaproxy/zaproxy/releases/download/v2.16.0/ZAP_2.16.0_Linux.tar.gz
-              tar -xvf ZAP_2.16.0_Linux.tar.gz -C /opt
-              sudo ln -sf /opt/ZAP_2.16.0/zap.sh /usr/local/bin/zap
-            displayName: 'Install OWASP ZAP'
-
-          # Start OWASP ZAP
-          - script: |
-              zap -daemon -config api.disablekey=true -port 8080 &
-              # Wait for ZAP to initialize (check if port is open)
-              until nc -z localhost 8080; do
-                echo "Waiting for ZAP to start..."
-                sleep 5
-              done
-            displayName: 'Start OWASP ZAP'
-
-          # Run OWASP ZAP Scan
-          - script: |
-              zap -cmd -quickurl http://localhost:3000 -quickout zap_report.html
-            displayName: 'Run OWASP ZAP Scan'
-
-          # Publish OWASP ZAP Report
-          - task: PublishBuildArtifacts@1
-            inputs:
-              artifactName: 'OWASP_ZAP_Report'
-              targetPath: $(System.DefaultWorkingDirectory)/zap_report.html
-            displayName: 'Publish OWASP ZAP Report'
-
-  # Uncomment the following stage if SonarQube is required
-  # - stage: SonarQube
-  #   displayName: 'SonarQube Static Code Analysis'
-  #   dependsOn: Build
-  #   jobs:
-  #     - job: SonarQube
-  #       displayName: 'SonarQube SCA'
-  #       steps:
-  #         # Prepare SonarQube analysis
-  #         - task: SonarQubePrepare@5
-  #           inputs:
-  #             SonarQube: 'SonarQube-Service-Connection'  # Replace with your SonarQube service connection
-  #             scannerMode: 'CLI'
-  #             configMode: 'manual'
-  #             cliProjectKey: 'YourProjectKey'
-  #             cliSources: '.'
-  #             extraProperties: |
-  #               sonar.javascript.file.suffixes=.js
-  #               sonar.exclusions=**/node_modules/**
-
-  #         # Run SonarQube scanner
-  #         - task: SonarQubeAnalyze@5
-
-  #         # Publish SonarQube analysis results
-  #         - task: SonarQubePublish@5
-  #           inputs:
-  #             pollingTimeoutSec: '300'
 
   - stage: Deploy
     displayName: 'Deploy Stage'
     dependsOn: 
       - Build
-      # - OWASP
-      # Uncomment the following if SonarQube stage is enabled
-      # - SonarQube
+      
     jobs:
       - job: Deploy
         displayName: 'Deployment Job'
