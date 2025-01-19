@@ -75,7 +75,7 @@ stages:
               terraform -version
             displayName: 'Install Terraform'
 
-          # Authenticate and provision infrastructure
+          # Authenticate and initialize Terraform backend
           - task: AzureCLI@2
             inputs:
               azureSubscription: 'Abel-serviceP-conn'
@@ -89,8 +89,9 @@ stages:
                 export TF_VAR_tenant_id=$(ARM_TENANT_ID)
                 export TF_VAR_subscription_id=$(ARM_SUBSCRIPTION_ID)
 
-                # Initialize Terraform with backend state
+                # Run Terraform Init with reconfigure
                 terraform init \
+                  -reconfigure \
                   -backend-config="resource_group_name=abel_RG" \
                   -backend-config="storage_account_name=terraform443" \
                   -backend-config="container_name=terraform-statefile" \
