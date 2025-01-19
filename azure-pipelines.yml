@@ -46,7 +46,7 @@ stages:
   - stage: Deploy
     displayName: 'Deploy Stage'
     dependsOn: 
-      - Build
+      - Build  # Ensure the Build stage is completed first
     jobs:
       - job: Provision
         displayName: 'Provision Infrastructure with Terraform'
@@ -69,6 +69,8 @@ stages:
 
       - job: Deploy
         displayName: 'Deployment Job'
+        dependsOn: 
+          - Provision  # Ensure the Provision job is completed before deployment
         timeoutInMinutes: 120
         steps:
           # Authenticate Azure CLI with Azure service principal
