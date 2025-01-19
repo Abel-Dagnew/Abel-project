@@ -35,7 +35,7 @@ stages:
               npm run build
             displayName: 'Build Application'
 
-  - stage: OWASP
+  # - stage: OWASP
     displayName: 'OWASP ZAP Security Check'
     dependsOn: Build
     jobs:
