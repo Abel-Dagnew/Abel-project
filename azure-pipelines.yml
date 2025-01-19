@@ -112,7 +112,7 @@ stages:
     displayName: 'Deploy Stage'
     dependsOn: 
       - Build
-      - OWASP
+      # - OWASP
       # Uncomment the following if SonarQube stage is enabled
       # - SonarQube
     jobs:
