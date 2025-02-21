@@ -64,63 +64,63 @@ stages:
 
 
   # - stage: Deploy
-    displayName: 'Deploy Stage'
-    dependsOn: 
-      - Build
-    jobs:
-      - job: Deploy
-        displayName: 'Deployment Job'
-        timeoutInMinutes: 120
-        steps:
-          # Download the artifact
-          - task: DownloadPipelineArtifact@2
-            inputs:
-              artifact: 'node_app'
-              path: '$(Pipeline.Workspace)'  # This should download into $(Pipeline.Workspace)/node_app.zip
-            displayName: 'Download Build Artifact'
+  #   displayName: 'Deploy Stage'
+  #   dependsOn: 
+  #     - Build
+  #   jobs:
+  #     - job: Deploy
+  #       displayName: 'Deployment Job'
+  #       timeoutInMinutes: 120
+  #       steps:
+  #         # Download the artifact
+  #         - task: DownloadPipelineArtifact@2
+  #           inputs:
+  #             artifact: 'node_app'
+  #             path: '$(Pipeline.Workspace)'  # This should download into $(Pipeline.Workspace)/node_app.zip
+  #           displayName: 'Download Build Artifact'
 
-          # Install Terraform
-          - script: |
-              curl -o terraform.zip https://releases.hashicorp.com/terraform/1.0.11/terraform_1.0.11_linux_amd64.zip
-              unzip terraform.zip
-              sudo mv terraform /usr/local/bin/
-              terraform -version
-            displayName: 'Install Terraform'
+  #         # Install Terraform
+  #         - script: |
+  #             curl -o terraform.zip https://releases.hashicorp.com/terraform/1.0.11/terraform_1.0.11_linux_amd64.zip
+  #             unzip terraform.zip
+  #             sudo mv terraform /usr/local/bin/
+  #             terraform -version
+  #           displayName: 'Install Terraform'
 
-          # Authenticate and initialize Terraform backend with reconfigure
-          - task: AzureCLI@2
-            inputs:
-              azureSubscription: 'Abel-serviceP-conn'
-              scriptType: bash
-              scriptLocation: inlineScript
-              inlineScript: |
-                export TF_LOG=DEBUG
-                export TF_LOG_PATH="terraform_debug.log"
-                export TF_VAR_client_id=$(ARM_CLIENT_ID)
-                export TF_VAR_client_secret=$(ARM_CLIENT_SECRET)
-                export TF_VAR_tenant_id=$(ARM_TENANT_ID)
-                export TF_VAR_subscription_id=$(ARM_SUBSCRIPTION_ID)
+  #         # Authenticate and initialize Terraform backend with reconfigure
+  #         - task: AzureCLI@2
+  #           inputs:
+  #             azureSubscription: 'Abel-serviceP-conn'
+  #             scriptType: bash
+  #             scriptLocation: inlineScript
+  #             inlineScript: |
+  #               export TF_LOG=DEBUG
+  #               export TF_LOG_PATH="terraform_debug.log"
+  #               export TF_VAR_client_id=$(ARM_CLIENT_ID)
+  #               export TF_VAR_client_secret=$(ARM_CLIENT_SECRET)
+  #               export TF_VAR_tenant_id=$(ARM_TENANT_ID)
+  #               export TF_VAR_subscription_id=$(ARM_SUBSCRIPTION_ID)
 
-                # Run Terraform Init with reconfigure (if needed)
-                terraform init  
+  #               # Run Terraform Init with reconfigure (if needed)
+  #               terraform init  
 
-                # Terraform Plan and Apply
-                terraform plan -target=module.Create_App_Service | tee -a $TF_LOG_PATH
-                terraform apply -target=module.Create_App_Service -auto-approve | tee -a $TF_LOG_PATH
-            displayName: 'Provision Infrastructure with Terraform'
+  #               # Terraform Plan and Apply
+  #               terraform plan -target=module.Create_App_Service | tee -a $TF_LOG_PATH
+  #               terraform apply -target=module.Create_App_Service -auto-approve | tee -a $TF_LOG_PATH
+  #           displayName: 'Provision Infrastructure with Terraform'
 
-          # Authenticate Azure CLI with Azure service principal
-          - script: |
-              echo "Authenticating with Azure CLI using Service Principal..."
-              az login --service-principal -u $(ARM_CLIENT_ID) -p $(ARM_CLIENT_SECRET) --tenant $(ARM_TENANT_ID)
-              az account set --subscription $(ARM_SUBSCRIPTION_ID)
-              echo "Authenticated with Azure CLI."
-            displayName: 'Azure CLI Authentication'
+  #         # Authenticate Azure CLI with Azure service principal
+  #         - script: |
+  #             echo "Authenticating with Azure CLI using Service Principal..."
+  #             az login --service-principal -u $(ARM_CLIENT_ID) -p $(ARM_CLIENT_SECRET) --tenant $(ARM_TENANT_ID)
+  #             az account set --subscription $(ARM_SUBSCRIPTION_ID)
+  #             echo "Authenticated with Azure CLI."
+  #           displayName: 'Azure CLI Authentication'
 
-          # Deploy the Node.js app
-          - script: |
-              az webapp deployment source config-zip \
-                --resource-group "AbelDevopsRG33" \
-                --name "AbelDevops23443" \
-                --src "$(Pipeline.Workspace)/node_app.zip"  # Correct download path
-            displayName: 'Deploy Node.js App to App Service'
+  #         # Deploy the Node.js app
+  #         - script: |
+  #             az webapp deployment source config-zip \
+  #               --resource-group "AbelDevopsRG33" \
+  #               --name "AbelDevops23443" \
+  #               --src "$(Pipeline.Workspace)/node_app.zip"  # Correct download path
+  #           displayName: 'Deploy Node.js App to App Service'
