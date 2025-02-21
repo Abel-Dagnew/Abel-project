@@ -26,6 +26,7 @@ stages:
           - task: NpmAuthenticate@0
             inputs:
               workingFile: 'app/.npmrc'
+              feed: 'testfeed'
             displayName: 'Authenticate with Azure Artifacts'
 
           # Install npm dependencies using Azure Artifacts feed
