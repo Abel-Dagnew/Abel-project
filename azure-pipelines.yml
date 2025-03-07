@@ -4,7 +4,7 @@ trigger:
       - main
 
 pool:
-  on-premagent: 'my=agent'
+  name: on-premagent
 
 stages:
   - stage: Build
