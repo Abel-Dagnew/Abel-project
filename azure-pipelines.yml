@@ -40,7 +40,7 @@ stages:
             
           - task: npmAuthenticate@0
             inputs:
-               workingFile: '.npmrc'  # Authenticate to Azure Artifacts
+               workingFile: 'app/.npmrc'  # Authenticate to Azure Artifacts
 
           - script: |
               cd app          
