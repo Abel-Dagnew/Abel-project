@@ -22,18 +22,13 @@ stages:
               versionSpec: '22.x'
             displayName: 'Install Node.js'
 
-          # Authenticate npm with Azure Artifacts
-          - task: NpmAuthenticate@0
-            inputs:
-              workingFile: 'app/.npmrc'
-              feed: 'testfeed'
-            displayName: 'Authenticate with Azure Artifacts'
+          
 
-          # Install npm dependencies using Azure Artifacts feed
-          - script: |
-              cd app
-              npm install --registry=https://pkgs.dev.azure.com/v-abeldagnew/ExampleProject/_packaging/testfeed/npm/registry/
-            displayName: 'Install Dependencies'
+          # # Install npm dependencies using Azure Artifacts feed
+          # - script: |
+          #     cd app
+          #     npm install --registry=https://pkgs.dev.azure.com/v-abeldagnew/ExampleProject/_packaging/testfeed/npm/registry/
+          #   displayName: 'Install Dependencies'
 
           # Build the application
           - script: |
@@ -41,24 +36,29 @@ stages:
               npm run build
             displayName: 'Build Application'
 
-          # Publish npm package to Azure Artifacts feed
-          - script: |
-              cd app
-              npm publish --registry=https://pkgs.dev.azure.com/v-abeldagnew/ExampleProject/_packaging/testfeed/npm/registry/
-            displayName: 'Publish Package to Azure Artifacts'
-
-          # Create a zip file of the application
-          - script: |
-              cd app
-              zip -r $(Build.ArtifactStagingDirectory)/node_app.zip .
-            displayName: 'Create Node.js App ZIP'
-
-          # Publish the artifact
-          - task: PublishPipelineArtifact@1
+          
+            
+          - task: npmAuthenticate@0
             inputs:
-              targetPath: '$(Build.ArtifactStagingDirectory)/node_app.zip'
-              artifact: 'node_app'
-            displayName: 'Publish Build Artifact'
+               workingFile: '.npmrc'  # Authenticate to Azure Artifacts
+
+          - script: |
+              npm version patch  # Optionally bump the version (major/minor/patch)
+              npm publish
+            displayName: 'Publish npm Package'
+           
+          # # Create a zip file of the application
+          # - script: |
+          #     cd app
+          #     zip -r $(Build.ArtifactStagingDirectory)/node_app.zip .
+          #   displayName: 'Create Node.js App ZIP'
+
+          # # Publish the artifact
+          # - task: PublishPipelineArtifact@1
+          #   inputs:
+          #     targetPath: '$(Build.ArtifactStagingDirectory)/node_app.zip'
+          #     artifact: 'node_app'
+          #   displayName: 'Publish Build Artifact'
 
 
 

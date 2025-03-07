@@ -1,0 +1,11 @@
+MetaTrader5==5.0.4874
+pandas>=2.2.0
+numpy>=2.2.0
+python-dotenv>=1.0.0
+ta>=0.10.2
+schedule>=1.2.0
+azure-storage-blob>=12.19.0
+azure-identity>=1.15.0
+azure-keyvault-secrets>=4.7.0
+flask>=3.0.0
+gunicorn>=21.2.0 
