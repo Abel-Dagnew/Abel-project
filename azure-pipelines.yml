@@ -44,8 +44,8 @@ stages:
 
           - script: |
               cd app          
-              npm version patch  # Optionally bump the version (major/minor/patch)
-              npm publish
+              npm version patch
+              npm publish --tag latest
             displayName: 'Publish npm Package'
            
           # # Create a zip file of the application
