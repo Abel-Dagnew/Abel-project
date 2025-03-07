@@ -43,6 +43,7 @@ stages:
                workingFile: '.npmrc'  # Authenticate to Azure Artifacts
 
           - script: |
+              cd app          
               npm version patch  # Optionally bump the version (major/minor/patch)
               npm publish
             displayName: 'Publish npm Package'
