@@ -1,5 +1,5 @@
 {
-    "name": "my-app",
+    "name": "abel-app",
     "version": "1.0.0",
     "description": "A Node.js application to display a GitHub link, project architecture image, and allow image download.",
     "main": "app.js",
