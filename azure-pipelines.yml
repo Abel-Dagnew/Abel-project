@@ -1,14 +1,11 @@
-# Trigger the pipeline on changes to the main branch
 trigger:
   branches:
     include:
-      - main  # Adjust this to your branch
+      - main
 
-# Use the latest Ubuntu VM image
 pool:
   vmImage: 'ubuntu-latest'
 
-# Define build and deployment stages
 stages:
   - stage: Build
     displayName: 'Build Stage'
@@ -22,145 +19,110 @@ stages:
           # Install Node.js
           - task: NodeTool@0
             inputs:
-              versionSpec: '22.x'  # Specify your Node.js version hfere
+              versionSpec: '22.x'  # Specify your Node.js version here
             displayName: 'Install Node.js'
 
-          # Install npm dependencies
-          - script: |
-              npm install
-            displayName: 'Install Dependencies'
+          
+
+          # # Install npm dependencies using Azure Artifacts feed
+          # - script: |
+          #     cd app
+          #     npm install --registry=https://pkgs.dev.azure.com/v-abeldagnew/ExampleProject/_packaging/testfeed/npm/registry/
+          #   displayName: 'Install Dependencies'
 
           # Build the application
           - script: |
+              cd app
               npm run build
             displayName: 'Build Application'
 
-  - stage: OWASP
-    displayName: 'OWASP ZAP Security Check'
-    dependsOn: Build
-    jobs:
-      - job: OWASPZAP
-        displayName: 'OWASP ZAP Scan'
-        steps:
-          # Install Java 17 (required for OWASP ZAP v2.16.0)
-          - script: |
-              sudo apt-get update
-              sudo apt-get install -y openjdk-17-jdk
-              # Set Java 17 as default without interactive prompt
-              sudo update-alternatives --set java /usr/lib/jvm/java-17-openjdk-amd64/bin/java
-              java -version
-            displayName: 'Install Java 17 and Set as Default'
-
-          # Install OWASP ZAP
-          - script: |
-              wget https://github.com/zaproxy/zaproxy/releases/download/v2.16.0/ZAP_2.16.0_Linux.tar.gz
-              tar -xvf ZAP_2.16.0_Linux.tar.gz -C /opt
-              sudo ln -sf /opt/ZAP_2.16.0/zap.sh /usr/local/bin/zap
-            displayName: 'Install OWASP ZAP'
-
-          # Start OWASP ZAP
-          - script: |
-              zap -daemon -config api.disablekey=true -port 8080 &
-              # Wait for ZAP to initialize (check if port is open)
-              until nc -z localhost 8080; do
-                echo "Waiting for ZAP to start..."
-                sleep 5
-              done
-            displayName: 'Start OWASP ZAP'
-
-          # Run OWASP ZAP Scan
-          - script: |
-              zap -cmd -quickurl http://localhost:3000 -quickout zap_report.html
-            displayName: 'Run OWASP ZAP Scan'
-
-          # Publish OWASP ZAP Report
-          - task: PublishBuildArtifacts@1
+          
+            
+          - task: npmAuthenticate@0
             inputs:
-              artifactName: 'OWASP_ZAP_Report'
-              targetPath: $(System.DefaultWorkingDirectory)/zap_report.html
-            displayName: 'Publish OWASP ZAP Report'
+               workingFile: 'app/.npmrc'  # Authenticate to Azure Artifacts
 
-  # Uncomment the following stage if SonarQube is required
-  # - stage: SonarQube
-  #   displayName: 'SonarQube Static Code Analysis'
-  #   dependsOn: Build
+          - script: |
+              cd app          
+              npm version patch
+              npm publish --tag latest
+            displayName: 'Publish npm Package'
+           
+          # # Create a zip file of the application
+          # - script: |
+          #     cd app
+          #     zip -r $(Build.ArtifactStagingDirectory)/node_app.zip .
+          #   displayName: 'Create Node.js App ZIP'
+
+          # # Publish the artifact
+          # - task: PublishPipelineArtifact@1
+          #   inputs:
+          #     targetPath: '$(Build.ArtifactStagingDirectory)/node_app.zip'
+          #     artifact: 'node_app'
+          #   displayName: 'Publish Build Artifact'
+
+
+
+
+
+  # - stage: Deploy
+  #   displayName: 'Deploy Stage'
+  #   dependsOn: 
+  #     - Build
   #   jobs:
-  #     - job: SonarQube
-  #       displayName: 'SonarQube SCA'
+  #     - job: Deploy
+  #       displayName: 'Deployment Job'
+  #       timeoutInMinutes: 120
   #       steps:
-  #         # Prepare SonarQube analysis
-  #         - task: SonarQubePrepare@5
+  #         # Download the artifact
+  #         - task: DownloadPipelineArtifact@2
   #           inputs:
-  #             SonarQube: 'SonarQube-Service-Connection'  # Replace with your SonarQube service connection
-  #             scannerMode: 'CLI'
-  #             configMode: 'manual'
-  #             cliProjectKey: 'YourProjectKey'
-  #             cliSources: '.'
-  #             extraProperties: |
-  #               sonar.javascript.file.suffixes=.js
-  #               sonar.exclusions=**/node_modules/**
+  #             artifact: 'node_app'
+  #             path: '$(Pipeline.Workspace)'  # This should download into $(Pipeline.Workspace)/node_app.zip
+  #           displayName: 'Download Build Artifact'
 
-  #         # Run SonarQube scanner
-  #         - task: SonarQubeAnalyze@5
+  #         # Install Terraform
+  #         - script: |
+  #             curl -o terraform.zip https://releases.hashicorp.com/terraform/1.0.11/terraform_1.0.11_linux_amd64.zip
+  #             unzip terraform.zip
+  #             sudo mv terraform /usr/local/bin/
+  #             terraform -version
+  #           displayName: 'Install Terraform'
 
-  #         # Publish SonarQube analysis results
-  #         - task: SonarQubePublish@5
+  #         # Authenticate and initialize Terraform backend with reconfigure
+  #         - task: AzureCLI@2
   #           inputs:
-  #             pollingTimeoutSec: '300'
+  #             azureSubscription: 'Abel-serviceP-conn'
+  #             scriptType: bash
+  #             scriptLocation: inlineScript
+  #             inlineScript: |
+  #               export TF_LOG=DEBUG
+  #               export TF_LOG_PATH="terraform_debug.log"
+  #               export TF_VAR_client_id=$(ARM_CLIENT_ID)
+  #               export TF_VAR_client_secret=$(ARM_CLIENT_SECRET)
+  #               export TF_VAR_tenant_id=$(ARM_TENANT_ID)
+  #               export TF_VAR_subscription_id=$(ARM_SUBSCRIPTION_ID)
 
-  - stage: Deploy
-    displayName: 'Deploy Stage'
-    dependsOn: 
-      - Build
-      - OWASP
-      # Uncomment the following if SonarQube stage is enabled
-      # - SonarQube
-    jobs:
-      - job: Deploy
-        displayName: 'Deployment Job'
-        timeoutInMinutes: 120  # Set job timeout to 120 minutes
-        steps:
-          # Checkout code
-          - checkout: self
+  #               # Run Terraform Init with reconfigure (if needed)
+  #               terraform init  
 
-          # Install Terraform
-          - script: |
-              curl -o terraform.zip https://releases.hashicorp.com/terraform/1.0.11/terraform_1.0.11_linux_amd64.zip
-              unzip terraform.zip
-              sudo mv terraform /usr/local/bin/
-              terraform -version
-            displayName: 'Install Terraform'
+  #               # Terraform Plan and Apply
+  #               terraform plan -target=module.Create_App_Service | tee -a $TF_LOG_PATH
+  #               terraform apply -target=module.Create_App_Service -auto-approve | tee -a $TF_LOG_PATH
+  #           displayName: 'Provision Infrastructure with Terraform'
 
-          # Authenticate and provision infrastructure
-          - task: AzureCLI@2
-            inputs:
-              azureSubscription: 'Abel-serviceP-conn'
-              scriptType: bash
-              scriptLocation: inlineScript
-              inlineScript: |
-                export TF_LOG=DEBUG
-                export TF_LOG_PATH="terraform_debug.log"
-                export TF_VAR_client_id=$(ARM_CLIENT_ID)
-                export TF_VAR_client_secret=$(ARM_CLIENT_SECRET)
-                export TF_VAR_tenant_id=$(ARM_TENANT_ID)
-                export TF_VAR_subscription_id=$(ARM_SUBSCRIPTION_ID)
-                terraform init | tee -a $TF_LOG_PATH
-                terraform plan -target=module.Create_App_Service | tee -a $TF_LOG_PATH
-                terraform apply -target=module.Create_App_Service -auto-approve | tee -a $TF_LOG_PATH
-            displayName: 'Provision Infrastructure with Terraform'
+  #         # Authenticate Azure CLI with Azure service principal
+  #         - script: |
+  #             echo "Authenticating with Azure CLI using Service Principal..."
+  #             az login --service-principal -u $(ARM_CLIENT_ID) -p $(ARM_CLIENT_SECRET) --tenant $(ARM_TENANT_ID)
+  #             az account set --subscription $(ARM_SUBSCRIPTION_ID)
+  #             echo "Authenticated with Azure CLI."
+  #           displayName: 'Azure CLI Authentication'
 
-          # Deploy the Node.js app
-          - task: AzureCLI@2
-            inputs:
-              azureSubscription: 'Abel-serviceP-conn'
-              scriptType: bash
-              scriptLocation: inlineScript
-              inlineScript: |
-                zip -r node_app.zip . 
-                az webapp deployment source config-zip \
-                  --resource-group "AbelDevopsRG33" \
-                  --name "AbelDevops23443" \
-                  --src "node_app.zip"
-            displayName: 'Deploy Node.js App to App Service'
-
-
+  #         # Deploy the Node.js app
+  #         - script: |
+  #             az webapp deployment source config-zip \
+  #               --resource-group "AbelDevopsRG33" \
+  #               --name "AbelDevops23443" \
+  #               --src "$(Pipeline.Workspace)/node_app.zip"  # Correct download path
+  #           displayName: 'Deploy Node.js App to App Service'
