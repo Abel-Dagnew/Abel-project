@@ -22,7 +22,7 @@ stages:
           # Install Node.js
           - task: NodeTool@0
             inputs:
-              versionSpec: '22.x'  # Specify your Node.js version here
+              versionSpec: '22.x'  # Specify your Node.js version hfere
             displayName: 'Install Node.js'
 
           # Install npm dependencies
