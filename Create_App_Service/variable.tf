@@ -15,5 +15,5 @@ variable "app_service_plan_name" {
 
 variable "app_service_name" {
   type    = string
-  default = "AbelDevops23443"
+  default = "AbelDevops231112"
 }
