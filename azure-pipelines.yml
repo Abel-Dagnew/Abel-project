@@ -97,7 +97,7 @@ stages:
               scriptLocation: inlineScript
               inlineScript: |
                 # Run Terraform Init with reconfigure (if needed)
-                terraform init  
+                terraform init -reconfigure 
 
                 # Terraform Plan and Apply
                 terraform plan -target=module.Create_App_Service | tee -a $TF_LOG_PATH
