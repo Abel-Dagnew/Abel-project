@@ -7,59 +7,59 @@ pool:
   vmImage: 'ubuntu-latest'
 
 stages:
-  - stage: Build
-    displayName: 'Build Stage'
-    jobs:
-      - job: Build
-        displayName: 'Build Job'
-        steps:
-          # Checkout code
-          - checkout: self
+  # - stage: Build
+  #   displayName: 'Build Stage'
+  #   jobs:
+  #     - job: Build
+  #       displayName: 'Build Job'
+  #       steps:
+  #         # Checkout code
+  #         - checkout: self
 
-          # Install Node.js
-          - task: NodeTool@0
-            inputs:
-              versionSpec: '22.x'  # Specify your Node.js version here
-            displayName: 'Install Node.js'
+  #         # Install Node.js
+  #         - task: NodeTool@0
+  #           inputs:
+  #             versionSpec: '22.x'  # Specify your Node.js version here
+  #           displayName: 'Install Node.js'
 
           
 
-          # # Install npm dependencies using Azure Artifacts feed
-          # - script: |
-          #     cd app
-          #     npm install --registry=https://pkgs.dev.azure.com/v-abeldagnew/ExampleProject/_packaging/testfeed/npm/registry/
-          #   displayName: 'Install Dependencies'
+  #         # # Install npm dependencies using Azure Artifacts feed
+  #         # - script: |
+  #         #     cd app
+  #         #     npm install --registry=https://pkgs.dev.azure.com/v-abeldagnew/ExampleProject/_packaging/testfeed/npm/registry/
+  #         #   displayName: 'Install Dependencies'
 
-          # Build the application
-          - script: |
-              cd app
-              npm run build
-            displayName: 'Build Application'
+  #         # Build the application
+  #         - script: |
+  #             cd app
+  #             npm run build
+  #           displayName: 'Build Application'
 
           
             
-          - task: npmAuthenticate@0
-            inputs:
-               workingFile: 'app/.npmrc'  # Authenticate to Azure Artifacts
+  #         - task: npmAuthenticate@0
+  #           inputs:
+  #              workingFile: 'app/.npmrc'  # Authenticate to Azure Artifacts
 
-          - script: |
-              cd app          
-              npm version patch
-              npm publish --tag latest
-            displayName: 'Publish npm Package'
+  #         - script: |
+  #             cd app          
+  #             npm version patch
+  #             npm publish --tag latest
+  #           displayName: 'Publish npm Package'
            
-          # # Create a zip file of the application
-          # - script: |
-          #     cd app
-          #     zip -r $(Build.ArtifactStagingDirectory)/node_app.zip .
-          #   displayName: 'Create Node.js App ZIP'
+  #         # # Create a zip file of the application
+  #         # - script: |
+  #         #     cd app
+  #         #     zip -r $(Build.ArtifactStagingDirectory)/node_app.zip .
+  #         #   displayName: 'Create Node.js App ZIP'
 
-          # # Publish the artifact
-          # - task: PublishPipelineArtifact@1
-          #   inputs:
-          #     targetPath: '$(Build.ArtifactStagingDirectory)/node_app.zip'
-          #     artifact: 'node_app'
-          #   displayName: 'Publish Build Artifact'
+  #         # # Publish the artifact
+  #         # - task: PublishPipelineArtifact@1
+  #         #   inputs:
+  #         #     targetPath: '$(Build.ArtifactStagingDirectory)/node_app.zip'
+  #         #     artifact: 'node_app'
+  #         #   displayName: 'Publish Build Artifact'
 
 
 
@@ -67,19 +67,19 @@ stages:
 
   - stage: Deploy
     displayName: 'Deploy Stage'
-    dependsOn: 
-      - Build
+    # dependsOn: 
+    #   - Build
     jobs:
       - job: Deploy
         displayName: 'Deployment Job'
         timeoutInMinutes: 120
         steps:
           # Download the artifact
-          - task: DownloadPipelineArtifact@2
-            inputs:
-              artifact: 'node_app'
-              path: '$(Pipeline.Workspace)'  # This should download into $(Pipeline.Workspace)/node_app.zip
-            displayName: 'Download Build Artifact'
+          # - task: DownloadPipelineArtifact@2
+          #   inputs:
+          #     artifact: 'node_app'
+          #     path: '$(Pipeline.Workspace)'  # This should download into $(Pipeline.Workspace)/node_app.zip
+          #   displayName: 'Download Build Artifact'
 
           # Install Terraform
           - script: |
@@ -111,18 +111,18 @@ stages:
                 terraform apply -target=module.Create_App_Service -auto-approve | tee -a $TF_LOG_PATH
             displayName: 'Provision Infrastructure with Terraform'
 
-          # Authenticate Azure CLI with Azure service principal
-          - script: |
-              echo "Authenticating with Azure CLI using Service Principal..."
-              az login --service-principal -u $(ARM_CLIENT_ID) -p $(ARM_CLIENT_SECRET) --tenant $(ARM_TENANT_ID)
-              az account set --subscription $(ARM_SUBSCRIPTION_ID)
-              echo "Authenticated with Azure CLI."
-            displayName: 'Azure CLI Authentication'
+          # # Authenticate Azure CLI with Azure service principal
+          # - script: |
+          #     echo "Authenticating with Azure CLI using Service Principal..."
+          #     az login --service-principal -u $(ARM_CLIENT_ID) -p $(ARM_CLIENT_SECRET) --tenant $(ARM_TENANT_ID)
+          #     az account set --subscription $(ARM_SUBSCRIPTION_ID)
+          #     echo "Authenticated with Azure CLI."
+          #   displayName: 'Azure CLI Authentication'
 
-          # Deploy the Node.js app
-          - script: |
-              az webapp deployment source config-zip \
-                --resource-group "AbelDevopsRG33" \
-                --name "AbelDevops231112" \
-                --src "$(Pipeline.Workspace)/node_app.zip"  # Correct download path
-            displayName: 'Deploy Node.js App to App Service'
+          # # Deploy the Node.js app
+          # - script: |
+          #     az webapp deployment source config-zip \
+          #       --resource-group "AbelDevopsRG33" \
+          #       --name "AbelDevops231112" \
+          #       --src "$(Pipeline.Workspace)/node_app.zip"  # Correct download path
+          #   displayName: 'Deploy Node.js App to App Service'
