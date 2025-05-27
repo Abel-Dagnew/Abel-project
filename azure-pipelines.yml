@@ -17,35 +17,34 @@ stages:
       - job: TerraformJob
         displayName: 'Run Terraform Deployment'
         steps:
-          # Install Terraform
-          - script: |
-              curl -o terraform.zip https://releases.hashicorp.com/terraform/1.0.11/terraform_1.0.11_linux_amd64.zip
-              unzip terraform.zip
-              sudo mv terraform /usr/local/bin/
-              terraform -version
-            displayName: 'Install Terraform'
 
-          # Step 2: Run Terraform Init, Plan, and Apply
+          # ✅ Step 1: Install Terraform (Fast & Clean)
+          - task: TerraformInstaller@0
+            displayName: 'Install Terraform'
+            inputs:
+              terraformVersion: '1.0.11'  # Change if you need a different version
+
+          # ✅ Step 2: Authenticate and Run Terraform Commands
           - task: AzureCLI@2
             displayName: 'Terraform Init, Plan, and Apply'
             inputs:
-              azureSubscription: 'abel-conn-service'  # Update to your service connection name
+              azureSubscription: 'abel-conn-service'  # Update to your Azure service connection name
               scriptType: bash
               scriptLocation: inlineScript
               inlineScript: |
-                # Navigate to Terraform configuration directory
+                # Navigate to your Terraform directory
                 cd $(System.DefaultWorkingDirectory)/$(TERRAFORM_DIR)
 
-                # Clean up any previous state
+                # Clean previous local state (optional but safe in CI)
                 rm -rf .terraform
 
-                # Initialize backend with -reconfigure
+                # Init backend (reconfigure required if using backend block)
                 terraform init -reconfigure
 
-                # Terraform Plan (target optional)
+                # Plan with specific target (optional)
                 terraform plan -target=module.Create_App_Service | tee -a $TF_LOG_PATH
 
-                # Terraform Apply
+                # Apply the changes
                 terraform apply -target=module.Create_App_Service -auto-approve | tee -a $TF_LOG_PATH  
 
 # stages:
