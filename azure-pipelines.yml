@@ -17,7 +17,7 @@ stages:
       - job: TerraformJob
         displayName: 'Run Terraform Deployment'
         steps:
-          # Step 1: Install Terraform
+          # Install Terraform
           - script: |
               curl -o terraform.zip https://releases.hashicorp.com/terraform/1.0.11/terraform_1.0.11_linux_amd64.zip
               unzip terraform.zip
@@ -107,54 +107,54 @@ stages:
 
 
 
-  - stage: Deploy
-    displayName: 'Deploy Stage'
-    # dependsOn: 
-    #   - Build
-    jobs:
-      - job: Deploy
-        displayName: 'Deployment Job'
-        timeoutInMinutes: 120
-        steps:
-          # Download the artifact
-          # - task: DownloadPipelineArtifact@2
-          #   inputs:
-          #     artifact: 'node_app'
-          #     path: '$(Pipeline.Workspace)'  # This should download into $(Pipeline.Workspace)/node_app.zip
-          #   displayName: 'Download Build Artifact'
+  # # - stage: Deploy
+  #   displayName: 'Deploy Stage'
+  #   # dependsOn: 
+  #   #   - Build
+  #   jobs:
+  #     - job: Deploy
+  #       displayName: 'Deployment Job'
+  #       timeoutInMinutes: 120
+  #       steps:
+  #         # Download the artifact
+  #         # - task: DownloadPipelineArtifact@2
+  #         #   inputs:
+  #         #     artifact: 'node_app'
+  #         #     path: '$(Pipeline.Workspace)'  # This should download into $(Pipeline.Workspace)/node_app.zip
+  #         #   displayName: 'Download Build Artifact'
 
-          # Install Terraform
-          - script: |
-              curl -o terraform.zip https://releases.hashicorp.com/terraform/1.0.11/terraform_1.0.11_linux_amd64.zip
-              unzip terraform.zip
-              sudo mv terraform /usr/local/bin/
-              terraform -version
-            displayName: 'Install Terraform'
+  #         # Install Terraform
+  #         - script: |
+  #             curl -o terraform.zip https://releases.hashicorp.com/terraform/1.0.11/terraform_1.0.11_linux_amd64.zip
+  #             unzip terraform.zip
+  #             sudo mv terraform /usr/local/bin/
+  #             terraform -version
+  #           displayName: 'Install Terraform'
 
-          # Authenticate and initialize Terraform backend with reconfigure
-          - task: AzureCLI@2
-            inputs:
-              azureSubscription: 'abel-conn-service'
-              scriptType: bash
-              scriptLocation: inlineScript
-              inlineScript: |
-                cd $(System.DefaultWorkingDirectory)/./
-                terraform init -reconfigure
-                terraform plan -target=module.Create_App_Service | tee -a $TF_LOG_PATH
-                terraform apply -target=module.Create_App_Service -auto-approve | tee -a $TF_LOG_PATH
+  #         # Authenticate and initialize Terraform backend with reconfigure
+  #         - task: AzureCLI@2
+  #           inputs:
+  #             azureSubscription: 'abel-conn-service'
+  #             scriptType: bash
+  #             scriptLocation: inlineScript
+  #             inlineScript: |
+  #               cd $(System.DefaultWorkingDirectory)/./
+  #               terraform init -reconfigure
+  #               terraform plan -target=module.Create_App_Service | tee -a $TF_LOG_PATH
+  #               terraform apply -target=module.Create_App_Service -auto-approve | tee -a $TF_LOG_PATH
 
-          # # Authenticate Azure CLI with Azure service principal
-          # - script: |
-          #     echo "Authenticating with Azure CLI using Service Principal..."
-          #     az login --service-principal -u $(ARM_CLIENT_ID) -p $(ARM_CLIENT_SECRET) --tenant $(ARM_TENANT_ID)
-          #     az account set --subscription $(ARM_SUBSCRIPTION_ID)
-          #     echo "Authenticated with Azure CLI."
-          #   displayName: 'Azure CLI Authentication'
+  #         # # Authenticate Azure CLI with Azure service principal
+  #         # - script: |
+  #         #     echo "Authenticating with Azure CLI using Service Principal..."
+  #         #     az login --service-principal -u $(ARM_CLIENT_ID) -p $(ARM_CLIENT_SECRET) --tenant $(ARM_TENANT_ID)
+  #         #     az account set --subscription $(ARM_SUBSCRIPTION_ID)
+  #         #     echo "Authenticated with Azure CLI."
+  #         #   displayName: 'Azure CLI Authentication'
 
-          # # Deploy the Node.js app
-          # - script: |
-          #     az webapp deployment source config-zip \
-          #       --resource-group "AbelDevopsRG33" \
-          #       --name "AbelDevops231112" \
-          #       --src "$(Pipeline.Workspace)/node_app.zip"  # Correct download path
-          #   displayName: 'Deploy Node.js App to App Service'
+  #         # # Deploy the Node.js app
+  #         # - script: |
+  #         #     az webapp deployment source config-zip \
+  #         #       --resource-group "AbelDevopsRG33" \
+  #         #       --name "AbelDevops231112" \
+  #         #       --src "$(Pipeline.Workspace)/node_app.zip"  # Correct download path
+  #         #   displayName: 'Deploy Node.js App to App Service'
