@@ -11,26 +11,27 @@ variables:
 
 stages:
 - stage: Terraform_Provisioning
+  displayName: 'Provision Azure Infrastructure with Terraform'
   jobs:
   - job: TerraformJob
-    displayName: 'Run Terraform Tasks'
+    displayName: 'Run Terraform Deployment'
     steps:
-    - task: TerraformCLI@0
+    - task: TerraformCLI@1
       displayName: 'Terraform Init'
       inputs:
         command: 'init'
         workingDirectory: '$(System.DefaultWorkingDirectory)/$(TERRAFORM_DIR)'
         backendType: 'azurerm'
-        backendServiceArm: 'abel-conn-service'  # your service connection name
+        backendServiceArm: 'abel-conn-service'
         commandOptions: '-reconfigure'
 
-    - task: TerraformCLI@0
+    - task: TerraformCLI@1
       displayName: 'Terraform Plan'
       inputs:
         command: 'plan'
         workingDirectory: '$(System.DefaultWorkingDirectory)/$(TERRAFORM_DIR)'
 
-    - task: TerraformCLI@0
+    - task: TerraformCLI@1
       displayName: 'Terraform Apply'
       inputs:
         command: 'apply'
