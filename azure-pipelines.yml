@@ -8,38 +8,45 @@ pool:
 
 variables:
   TF_LOG_PATH: $(Build.ArtifactStagingDirectory)/terraform.log
+  TERRAFORM_DIR: 'terraform'  # adjust if your .tf files are elsewhere
 
-steps:
-  # Step 1: Install Terraform
-  - script: |
-      curl -o terraform.zip https://releases.hashicorp.com/terraform/1.0.11/terraform_1.0.11_linux_amd64.zip
-      unzip terraform.zip
-      sudo mv terraform /usr/local/bin/
-      terraform -version
-    displayName: 'Install Terraform'
+stages:
+  - stage: Terraform_Provisioning
+    displayName: 'Provision Azure Infrastructure with Terraform'
+    jobs:
+      - job: TerraformJob
+        displayName: 'Run Terraform Deployment'
+        steps:
+          # Step 1: Install Terraform
+          - script: |
+              curl -o terraform.zip https://releases.hashicorp.com/terraform/1.0.11/terraform_1.0.11_linux_amd64.zip
+              unzip terraform.zip
+              sudo mv terraform /usr/local/bin/
+              terraform -version
+            displayName: 'Install Terraform'
 
-  # Step 2: Use Azure CLI to Authenticate and Run Terraform
-  - task: AzureCLI@2
-    inputs:
-      azureSubscription: 'abel-conn-service'  # Replace with your service connection name
-      scriptType: bash
-      scriptLocation: inlineScript
-      inlineScript: |
-        # Change to the directory where your Terraform files are
-        cd $(System.DefaultWorkingDirectory)/terraform  # update this path if needed
+          # Step 2: Run Terraform Init, Plan, and Apply
+          - task: AzureCLI@2
+            displayName: 'Terraform Init, Plan, and Apply'
+            inputs:
+              azureSubscription: 'abel-conn-service'  # Update to your service connection name
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                # Navigate to Terraform configuration directory
+                cd $(System.DefaultWorkingDirectory)/$(TERRAFORM_DIR)
 
-        # Clean any stale terraform cache
-        rm -rf .terraform
+                # Clean up any previous state
+                rm -rf .terraform
 
-        # Reinitialize backend (important if backend config changed)
-        terraform init -reconfigure
+                # Initialize backend with -reconfigure
+                terraform init -reconfigure
 
-        # Terraform Plan (targeting specific module, optional)
-        terraform plan -target=module.Create_App_Service | tee -a $TF_LOG_PATH
+                # Terraform Plan (target optional)
+                terraform plan -target=module.Create_App_Service | tee -a $TF_LOG_PATH
 
-        # Terraform Apply
-        terraform apply -target=module.Create_App_Service -auto-approve | tee -a $TF_LOG_PATH
-    displayName: 'Provision Infrastructure with Terraform'  
+                # Terraform Apply
+                terraform apply -target=module.Create_App_Service -auto-approve | tee -a $TF_LOG_PATH  
 
 # stages:
   # - stage: Build
