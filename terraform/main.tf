@@ -19,16 +19,22 @@ terraform {
 }
 
 
-
+provider "azurerm" {
+  features {}
+  alias           = "azresourceprovider"
+   // Reference a variable
+   
+  use_msi = true
+}
 
 
 
 module "Create_App_Service" {
   
   source = "./modules/Create_App_Service"
-  providers = {
-    azurerm = azurerm.azresourceprovider
-  }
+  # providers = {
+  #   azurerm = azurerm.azresourceprovider
+  # }
      
 }
 
