@@ -7,7 +7,7 @@ pool:
   vmImage: 'ubuntu-latest'
 
 variables:
-  TERRAFORM_DIR: 'terraform'
+  TERRAFORM_DIR: './terraform'
 
 stages:
 - stage: Terraform_Provisioning
