@@ -96,13 +96,10 @@ stages:
               scriptType: bash
               scriptLocation: inlineScript
               inlineScript: |
-                # Run Terraform Init with reconfigure (if needed)
-                terraform init -reconfigure 
-
-                # Terraform Plan and Apply
+                cd $(System.DefaultWorkingDirectory)/./
+                terraform init -reconfigure
                 terraform plan -target=module.Create_App_Service | tee -a $TF_LOG_PATH
                 terraform apply -target=module.Create_App_Service -auto-approve | tee -a $TF_LOG_PATH
-            displayName: 'Provision Infrastructure with Terraform'
 
           # # Authenticate Azure CLI with Azure service principal
           # - script: |
