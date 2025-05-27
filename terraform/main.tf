@@ -15,7 +15,7 @@ terraform {
 
 module "Create_App_Service" {
   
-  source = "./Create_App_Service"
+  source = "./modules/Create_App_Service"
   providers = {
     azurerm = azurerm.azresourceprovider
   }
