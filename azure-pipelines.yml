@@ -7,50 +7,37 @@ pool:
   vmImage: 'ubuntu-latest'
 
 variables:
-  TF_LOG_PATH: $(Build.ArtifactStagingDirectory)/terraform.log
-  TERRAFORM_DIR: 'terraform'  # adjust if your .tf files are elsewhere
+  TERRAFORM_DIR: 'terraform'
 
 stages:
-  - stage: Terraform_Provisioning
-    displayName: 'Provision Azure Infrastructure with Terraform'
-    jobs:
-      - job: TerraformJob
-        displayName: 'Run Terraform Deployment'
-        steps:
-          # Install Terraform (optional, since TerraformCLI task has Terraform bundled)
-          # You can skip this if using TerraformCLI task
-          #- script: |
-          #    curl -o terraform.zip https://releases.hashicorp.com/terraform/1.0.11/terraform_1.0.11_linux_amd64.zip
-          #    unzip terraform.zip
-          #    sudo mv terraform /usr/local/bin/
-          #    terraform -version
-          #  displayName: 'Install Terraform'
+- stage: Terraform_Provisioning
+  displayName: 'Provision Azure Infrastructure with Terraform'
+  jobs:
+  - job: TerraformJob
+    displayName: 'Run Terraform Deployment'
+    steps:
+    - task: TerraformCLI@1
+      displayName: 'Terraform Init'
+      inputs:
+        command: 'init'
+        workingDirectory: '$(System.DefaultWorkingDirectory)/$(TERRAFORM_DIR)'
+        backendType: 'azurerm'
+        backendServiceArm: 'abel-conn-service'
+        commandOptions: '-reconfigure'
 
-          # Terraform Init with AzureRM backend configured using service connection
-          - task: TerraformCLI@0
-            displayName: 'Terraform Init'
-            inputs:
-              command: 'init'
-              workingDirectory: '$(System.DefaultWorkingDirectory)/$(TERRAFORM_DIR)'
-              commandOptions: '-reconfigure'
-              backendType: 'azurerm'
-              backendServiceArm: 'abel-conn-service'    # <-- your Azure DevOps service connection name
+    - task: TerraformCLI@1
+      displayName: 'Terraform Plan'
+      inputs:
+        command: 'plan'
+        workingDirectory: '$(System.DefaultWorkingDirectory)/$(TERRAFORM_DIR)'
 
-          # Terraform Plan targeting your module
-          - task: TerraformCLI@0
-            displayName: 'Terraform Plan'
-            inputs:
-              command: 'plan'
-              workingDirectory: '$(System.DefaultWorkingDirectory)/$(TERRAFORM_DIR)'
-              
+    - task: TerraformCLI@1
+      displayName: 'Terraform Apply'
+      inputs:
+        command: 'apply'
+        workingDirectory: '$(System.DefaultWorkingDirectory)/$(TERRAFORM_DIR)'
+        commandOptions: '-auto-approve'
 
-          # Terraform Apply targeting your module with auto approve
-          - task: TerraformCLI@0
-            displayName: 'Terraform Apply'
-            inputs:
-              command: 'apply'
-              workingDirectory: '$(System.DefaultWorkingDirectory)/$(TERRAFORM_DIR)'
-              commandOptions: '-auto-approve'
   
 
 # stages:
