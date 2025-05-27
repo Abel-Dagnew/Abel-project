@@ -42,10 +42,10 @@ stages:
                 terraform init -reconfigure
 
                 # Plan with specific target (optional)
-                terraform plan -target=module.Create_App_Service | tee -a $TF_LOG_PATH
+                terraform plan | tee -a $TF_LOG_PATH
 
                 # Apply the changes
-                terraform apply -target=module.Create_App_Service -auto-approve | tee -a $TF_LOG_PATH  
+                terraform apply -auto-approve | tee -a $TF_LOG_PATH  
 
 # stages:
   # - stage: Build
