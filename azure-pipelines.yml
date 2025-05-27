@@ -1,53 +1,25 @@
-trigger:
-  branches:
-    include:
-      - main
+- task: TerraformCLI@1
+  displayName: 'Terraform Init'
+  inputs:
+    command: 'init'
+    workingDirectory: '$(System.DefaultWorkingDirectory)/$(TERRAFORM_DIR)'
+    backendType: 'azurerm'
+    backendServiceArm: 'abel-conn-service'
+    commandOptions: '-reconfigure'
 
-pool:
-  vmImage: 'ubuntu-latest'
+- task: TerraformCLI@1
+  displayName: 'Terraform Plan'
+  inputs:
+    command: 'plan'
+    workingDirectory: '$(System.DefaultWorkingDirectory)/$(TERRAFORM_DIR)'
 
-variables:
-  TERRAFORM_DIR: 'terraform'
+- task: TerraformCLI@1
+  displayName: 'Terraform Apply'
+  inputs:
+    command: 'apply'
+    workingDirectory: '$(System.DefaultWorkingDirectory)/$(TERRAFORM_DIR)'
+    commandOptions: '-auto-approve'
 
-stages:
-- stage: Terraform_Provisioning
-  displayName: 'Provision Azure Infrastructure with Terraform'
-  jobs:
-  - job: TerraformJob
-    displayName: 'Run Terraform Deployment'
-    steps:
-    # ✅ Install Terraform first
-    - task: JasonBJohnson.azure-pipelines-tasks-terraform.azure-pipelines-tasks-terraform-installer.TerraformInstaller@1
-      displayName: 'Install Terraform'
-      inputs:
-        terraformVersion: '1.6.6'
-
-
-    - task: TerraformCLI@1
-      displayName: 'Terraform Init'
-      inputs:
-        command: 'init'
-        workingDirectory: '$(System.DefaultWorkingDirectory)/$(TERRAFORM_DIR)'
-        backendType: 'azurerm'
-        backendServiceArm: 'abel-conn-service'
-        commandOptions: '-reconfigure'
-
-    - task: TerraformCLI@1
-      displayName: 'Terraform Plan'
-      inputs:
-        command: 'plan'
-        workingDirectory: '$(System.DefaultWorkingDirectory)/$(TERRAFORM_DIR)'
-        backendType: 'azurerm'
-        backendServiceArm: 'abel-conn-service'
-
-    - task: TerraformCLI@1
-      displayName: 'Terraform Apply'
-      inputs:
-        command: 'apply'
-        workingDirectory: '$(System.DefaultWorkingDirectory)/$(TERRAFORM_DIR)'
-        backendType: 'azurerm'
-        backendServiceArm: 'abel-conn-service'
-        commandOptions: '-auto-approve'
 
 
   
