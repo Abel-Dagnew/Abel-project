@@ -19,13 +19,13 @@ terraform {
 }
 
 
-provider "azurerm" {
-  features {}
-  alias           = "azresourceprovider"
-   // Reference a variable
+# provider "azurerm" {
+#   features {}
+#   alias           = "azresourceprovider"
+#    // Reference a variable
    
-  use_msi = true
-}
+#   use_msi = true
+# }
 
 
 
