@@ -17,35 +17,41 @@ stages:
       - job: TerraformJob
         displayName: 'Run Terraform Deployment'
         steps:
+          # Install Terraform (optional, since TerraformCLI task has Terraform bundled)
+          # You can skip this if using TerraformCLI task
+          #- script: |
+          #    curl -o terraform.zip https://releases.hashicorp.com/terraform/1.0.11/terraform_1.0.11_linux_amd64.zip
+          #    unzip terraform.zip
+          #    sudo mv terraform /usr/local/bin/
+          #    terraform -version
+          #  displayName: 'Install Terraform'
 
-          # ✅ Step 1: Install Terraform (Fast & Clean)
-          - task: TerraformInstaller@0
-            displayName: 'Install Terraform'
+          # Terraform Init with AzureRM backend configured using service connection
+          - task: TerraformCLI@0
+            displayName: 'Terraform Init'
             inputs:
-              terraformVersion: '1.0.11'  # Change if you need a different version
+              command: 'init'
+              workingDirectory: '$(System.DefaultWorkingDirectory)/$(TERRAFORM_DIR)'
+              commandOptions: '-reconfigure'
+              backendType: 'azurerm'
+              backendServiceArm: 'abel-conn-service'    # <-- your Azure DevOps service connection name
 
-          # ✅ Step 2: Authenticate and Run Terraform Commands
-          - task: AzureCLI@2
-            displayName: 'Terraform Init, Plan, and Apply'
+          # Terraform Plan targeting your module
+          - task: TerraformCLI@0
+            displayName: 'Terraform Plan'
             inputs:
-              azureSubscription: 'abel-conn-service'  # Update to your Azure service connection name
-              scriptType: bash
-              scriptLocation: inlineScript
-              inlineScript: |
-                # Navigate to your Terraform directory
-                cd $(System.DefaultWorkingDirectory)/$(TERRAFORM_DIR)
+              command: 'plan'
+              workingDirectory: '$(System.DefaultWorkingDirectory)/$(TERRAFORM_DIR)'
+              
 
-                # Clean previous local state (optional but safe in CI)
-                rm -rf .terraform
-
-                # Init backend (reconfigure required if using backend block)
-                terraform init -reconfigure
-
-                # Plan with specific target (optional)
-                terraform plan | tee -a $TF_LOG_PATH
-
-                # Apply the changes
-                terraform apply -auto-approve | tee -a $TF_LOG_PATH  
+          # Terraform Apply targeting your module with auto approve
+          - task: TerraformCLI@0
+            displayName: 'Terraform Apply'
+            inputs:
+              command: 'apply'
+              workingDirectory: '$(System.DefaultWorkingDirectory)/$(TERRAFORM_DIR)'
+              commandOptions: '-auto-approve'
+  
 
 # stages:
   # - stage: Build
