@@ -36,13 +36,17 @@ stages:
       displayName: 'Terraform Plan'
       inputs:
         command: 'plan'
-        workingDirectory: '$(System.DefaultWorkingDirectory)/$(TERRAFORM_DIR)'
+        workingDirectory: '$(System.DefaultWorkingDirectory)/terraform'
+        backendType: 'azurerm'
+        backendServiceArm: 'abel-conn-service'
 
     - task: TerraformCLI@1
       displayName: 'Terraform Apply'
       inputs:
         command: 'apply'
-        workingDirectory: '$(System.DefaultWorkingDirectory)/$(TERRAFORM_DIR)'
+        workingDirectory: '$(System.DefaultWorkingDirectory)/terraform'
+        backendType: 'azurerm'
+        backendServiceArm: 'abel-conn-service'
         commandOptions: '-auto-approve'
 
 
