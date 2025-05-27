@@ -7,7 +7,7 @@ pool:
   vmImage: 'ubuntu-latest'
 
 variables:
-  TERRAFORM_DIR: 'Abel-project/terraform'
+  TERRAFORM_DIR: 'terraform'
 
 stages:
 - stage: Terraform_Provisioning
@@ -16,6 +16,12 @@ stages:
   - job: TerraformJob
     displayName: 'Run Terraform Deployment'
     steps:
+    # ✅ Install Terraform first
+    - task: TerraformInstaller@1
+      displayName: 'Install Terraform'
+      inputs:
+        terraformVersion: '1.6.6' # or your preferred version
+
     - task: TerraformCLI@1
       displayName: 'Terraform Init'
       inputs:
@@ -37,6 +43,7 @@ stages:
         command: 'apply'
         workingDirectory: '$(System.DefaultWorkingDirectory)/$(TERRAFORM_DIR)'
         commandOptions: '-auto-approve'
+
 
   
 
